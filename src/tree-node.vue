@@ -17,14 +17,15 @@
             {{ data.text }}
           </div
           ><input type="text" v-else v-model="data.text" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
-        /></label
-        ><div v-if="dragging && currentlyDraggedOver && !beingDragged" class="dropAfterTarget" @dragenter @dragover @drop.stop.prevent="droppedAfter">
-        </div>
-      </div>
+        /></label>
       <ul v-if="expanded && !isLeaf">
         <TreeNode v-for="node in children" :key="node.id" :data="node" :onCheckedChange="onCheckedChange" :onSelectedChange="onSelectedChange" :getChildren="getChildren"
         :dragging="dragging" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context" />
       </ul>
+        <div v-if="dragging && currentlyDraggedOver && !beingDragged" :class="{dropAfterTarget: true, dropAfterTargetHover: currentlyDraggedOverNext}" 
+        @dragenter.prevent="showAsNext" @dragover.prevent="showAsNext" @dragexit.prevent="stopShowAsNext" @dragleave.prevent="stopShowAsNext" @drop.stop.prevent="droppedAfter">
+        </div>
+      </div>
     </li>
 </template>
 
@@ -37,6 +38,7 @@ export default {
       expanded: false,
       beingDragged: false,
       currentlyDraggedOver: false,
+      currentlyDraggedOverNext: false,
     }
   },
   props: {
@@ -97,6 +99,12 @@ export default {
     },
     dragExit: function() {
       this.currentlyDraggedOver = false;
+    },
+    showAsNext: function() {
+      this.currentlyDraggedOverNext = true;
+    },
+    stopShowAsNext: function() {
+      this.currentlyDraggedOverNext = false;
     },
   },
   computed: {
@@ -217,9 +225,16 @@ export default {
   }
 
   .dropAfterTarget {
-    position: relative;
-    height: 0.5em;
+    display: block;
+    bottom: 0;
+    left: 0;
+    height: 0.4em;
     width: 100%;
     background-color: black;
+  }
+
+  .dropAfterTargetHover {
+    height: 1em;
+    background-color: #000;
   }
 </style>
