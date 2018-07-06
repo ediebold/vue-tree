@@ -1,28 +1,29 @@
 <template>
-    <li :class="classes">
-      <div class="expander" @click.stop="toggleExpand">
-        <template v-if="expandIcon && !isLeaf">
-          <icon :name="expandIcon" :scale="1" />
-        </template>
-        <template v-else>
-          <div class="no-icon" />
-        </template>
-      </div
-      ><input type="checkbox" v-model="checked" :indeterminate.prop="checked=='indet'" @click.stop
-      ><label class="tree-node-label" @click.stop="toggleSelect"
-        ><icon :name="icon" :scale="1" :color="iconColor" class="tree-icon"
-        /><div v-if="!editingText">
-          {{ text }}
+    <li :class="classes" draggable @dragstart.stop="startBeingDragged" @dragend.stop.prevent="endBeingDragged" @drop.stop.prevent="dropped" >
+      <div class="node-drag-target" @dragenter.stop.prevent="dragEnter" @dragover.stop.prevent="dragEnter" @dragexit.prevent="dragExit" @dragleave.prevent="dragExit"
+      @contextmenu.prevent="context($event, data.id)">
+        <div class="expander" @click.stop="toggleExpand">
+          <template v-if="expandIcon && !isLeaf">
+            <icon :name="expandIcon" :scale="1" />
+          </template>
+          <template v-else>
+            <div class="no-icon" />
+          </template>
         </div
-        ><input type="text" v-else v-model="text" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
-      /></label
-      ><div class="node-controls" v-if="defaultControls">
-        <icon name="edit" :scale="1" class="tree-icon" @click.native.stop="toggleUpdate"
-        /><icon name="times-circle" :scale="1" class="tree-icon" @click.native.stop="deleteSelf" />
+        ><input type="checkbox" :checked="data.checked" :indeterminate.prop="data.checked=='indet'" @click.prevent.stop="toggleChecked"
+        ><label class="tree-node-label" @click.stop="toggleSelect"
+          ><icon :name="data.icon" :scale="1" :color="data.iconColor" class="tree-icon"
+          /><div v-if="!editingText">
+            {{ data.text }}
+          </div
+          ><input type="text" v-else v-model="data.text" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
+        /></label
+        ><div v-if="dragging && currentlyDraggedOver && !beingDragged" class="dropAfterTarget" @dragenter @dragover @drop.stop.prevent="droppedAfter">
+        </div>
       </div>
-      <ul v-if="children && expanded">
-        <TreeNode :depth="depth + 1" />
-        <TreeNode :depth="depth + 1" />
+      <ul v-if="expanded && !isLeaf">
+        <TreeNode v-for="node in children" :key="node.id" :data="node" :onCheckedChange="onCheckedChange" :onSelectedChange="onSelectedChange" :getChildren="getChildren"
+        :dragging="dragging" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context" />
       </ul>
     </li>
 </template>
@@ -32,18 +33,23 @@ export default {
   name: 'TreeNode',
   data: function() {
     return {
-      text: "Test",
-      icon: "folder",
-      iconColor: "#DD0",
       editingText: false,
       expanded: false,
-      checked: false,
-      selected: false,
-      defaultControls: true,
+      beingDragged: false,
+      currentlyDraggedOver: false,
     }
   },
   props: {
-    depth: {type: Number, required: false, default: 0},
+    data: {type: Object, required: true,},
+    getChildren: {type: Function, required: false, default: null},
+    onCheckedChange: {type: Function, required: false, default: null},
+    onSelectedChange: {type: Function, required: false, default: null},
+    dragging:  {type: Boolean, required: false, default: false},
+    beginDrag: {type: Function, required: false, default: null},
+    endDrag: {type: Function, required: false, default: null},
+    registerDrop: {type: Function, required: false, default: null},
+    registerDropAfter: {type: Function, required: false, default: null},
+    context: {type: Function, required: false, default: null},
   },
   methods: {
     beginUpdate: function() {
@@ -54,8 +60,11 @@ export default {
       this.editingText = false;
       this.$emit('endUpdate');
     },
+    toggleChecked: function() {
+      this.onCheckedChange(this.data.id, !this.data.checked)
+    },
     toggleSelect: function() {
-      this.selected = !this.selected;
+      this.onSelectedChange(this.data.id, !this.data.selected)
     },
     toggleUpdate: function() {
       if (!this.editingText) {
@@ -67,23 +76,45 @@ export default {
     toggleExpand: function() {
       this.expanded = !this.expanded;
     },
-    deleteSelf: function() {
-      // delete from source
-      // delete children
-      // trigger parent update?
-    }
+    startBeingDragged: function($event) {
+      this.beingDragged = true;
+      this.beginDrag($event, this.data);
+    },
+    endBeingDragged: function($event) {
+      this.beingDragged = false;
+      this.endDrag($event, this.data)
+    },
+    dropped: function($event) {
+      this.currentlyDraggedOver = false;
+      this.registerDrop($event, this.data)
+    },
+    droppedAfter: function($event) {
+      this.currentlyDraggedOver = false;
+      this.registerDropAfter($event, this.data)
+    },
+    dragEnter: function() {
+      this.currentlyDraggedOver = true;
+    },
+    dragExit: function() {
+      this.currentlyDraggedOver = false;
+    },
   },
   computed: {
     classes: function() {
       return {
         "tree-node" : true,
-        "selected" : this.selected,
+        "selected" : this.data.selected,
         "expanded" : this.expanded,
         "leaf" : this.isLeaf,
+        "root" : this.isRoot,
+        "highlighted" : this.currentlyDraggedOver,
       }
     },
+    isRoot: function() {
+      return this.data.parent == null;
+    },
     isLeaf: function() {
-      return !this.children;
+      return !this.children.length > 0;
     },
     expandIcon: function() {
       if (this.isLeaf) {
@@ -95,18 +126,27 @@ export default {
       }
     },
     children: function() {
-      return this.depth < 4;
-    },
+      return this.getChildren(this.data.id);
+    }
   },
+  watch: {
+  },
+  mounted: function() {
+  }
 }
 </script>
 <style>
-  .tree-node > *, .tree-node-label > * {
+  .tree-node > *, .tree-node-label > *, .node-drag-target > * {
       display: inline-block;
   }
-  .tree-node.selected {
+  .tree-node.selected > .node-drag-target {
     background-color: #999;
   }
+
+  .tree-node.highlighted > .node-drag-target {
+    background-color: #CCC;
+  }
+
   .tree-icon {
     vertical-align: top;
     padding: 0 2px 0 2px;
@@ -165,11 +205,21 @@ export default {
       height: 0.6em;
   }
 
-  .no-icon {
-    width: 0.85em;
-    border-bottom: 1px solid #000;
-    height: 0.5em;
-    margin-left: -1px;
+  .tree-node.leaf.root .no-icon {
+      border-bottom: 0;
   }
 
+  .no-icon {
+    width: 1em;
+    border-bottom: 1px solid #000;
+    height: 0.5em;
+    margin-left: 0px;
+  }
+
+  .dropAfterTarget {
+    position: relative;
+    height: 0.5em;
+    width: 100%;
+    background-color: black;
+  }
 </style>
