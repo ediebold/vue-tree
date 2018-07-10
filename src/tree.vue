@@ -13,9 +13,10 @@
             </ul>
         </vue-context>
         <ul class="tree"> 
-            <TreeNode v-for="node in rootNodes" :key="node.id" :data="node" :onCheckedChange="checked" :onSelectedChange="selected" :getChildren="getChildren"
-            :dragging="draggingNodeID != null" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="openContextMenu"  />
+            <TreeNode v-for="node in rootNodes" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren"
+            :dragging="dragging" :editing="editing" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="openContextMenu"  />
         </ul>
+        <button class="newNodeButton" @click="makeRootNode">New Root Node</button>
     </div>
 </template>
 <script>
@@ -26,51 +27,28 @@
         name: 'VTree',
         data: function() {
             return {
-                nodes: [
-                    {id: 1, text: "asd", checked: true, selected: false, parent: null, previousSibling: null},
-                    {id: 2, text: "sad", checked: false, selected: false, parent: 1, previousSibling: null},
-                    {id: 3, text: "dsa", checked: true, selected: false, parent: 1, previousSibling: 5},
-                    {id: 4, text: "child", checked: false, selected: false, parent: 2, previousSibling: null},
-                    {id: 5, text: "before", checked: false, selected: false, parent: 1, previousSibling: 2},
-                    {id: 6, text: "extra", checked: false, selected: false, parent: null, previousSibling: 1},
-                    {id: 7, text: "extra2", checked: false, selected: false, parent: null, previousSibling: 6},
-                ],
                 draggingNodeID: null,
+                editing: null,
                 defaultControls: true,
-                treeEvents: {
-                    checked: function(id, newValue){console.log("test2", id, newValue)},
-                    selected: function(id, newValue){console.log("test2", id, newValue)},
-                    contextOptions: [
-                        {label: "test", func: function(id){console.log("test", id)}},
-                        {label: "test2", func: function(id){console.log("test2", id)}},
-                    ],
-                }
             }
         },
+        props: {
+            treeEvents: {type: Object, required: false, default: {}},
+            separateSelection: {type: Boolean, required: false, default: true},
+            singleCheck: {type: Boolean, required: false, default: false},
+        },
         methods: {
-            checked: function(id, newValue) {
-                this.nodes.find(node => node.id == id).checked = newValue;
-                this.treeEvents.checked(id, newValue)
+            updateCheck: function(id, newValue) {
+                this.$store.dispatch('checkNode', {nodeID: id, newValue})
             },
-            selected: function(id, newValue) {
-                this.nodes.find(node => node.id == id).selected = newValue;
-                this.treeEvents.selected(id, newValue)
+            updateSelect: function(id, newValue) {
+                this.$store.dispatch('selectNode', {nodeID: id, newValue})
             },
-            getChildren: function(id) {
-                if (typeof id === 'undefined') {
-                    id = null;
-                }
-                let unsortedChildren = this.nodes.filter(node => node.parent == id);
-                if (unsortedChildren.length <= 1) return unsortedChildren;
-                let sortedChildren = [];
-                let nextID = null;
-                while (unsortedChildren.length > 0) {
-                    let next = unsortedChildren.findIndex(node => node.previousSibling == nextID);
-                    nextID = unsortedChildren[next].id;
-                    sortedChildren.push(unsortedChildren[next])
-                    unsortedChildren.splice(next, 1);
-                }
-                return sortedChildren;
+            onCheckChange: function(id, newValue) {
+                this.treeEvents.checked(id, newValue);
+            },
+            onSelectChange: function(id, newValue) {
+                this.treeEvents.selected(id, newValue);
             },
             beginDrag: function(e, nodeData) {
                 this.draggingNodeID = nodeData.id;
@@ -78,69 +56,62 @@
             endDrag: function(e, nodeData) {
                 this.draggingNodeID = null;
             },
+            getChildren: function(id) {
+                return this.$store.getters.getNodeChildren(id);
+            },
             registerDrop: function(e, nodeData) {
-                if (this.draggingNodeID == nodeData.id) return;
-                let draggedNode = this.nodes.find(node => node.id == this.draggingNodeID);
-                if (draggedNode.parent == nodeData.id) return;
-                let oldSiblings = this.getChildren(draggedNode.parent);
-                let oldPrevious = oldSiblings.find(node => node.previousSibling == this.draggingNodeID)
-                if (oldPrevious != null) {
-                    oldPrevious.previousSibling = draggedNode.previousSibling;
-                }
-                let newSiblings = this.getChildren(nodeData.id);
-                if (newSiblings.length == 0) {
-                    draggedNode.previousSibling = null;
-                } else {
-                    draggedNode.previousSibling = newSiblings[newSiblings.length - 1].id
-                }
-                draggedNode.parent = nodeData.id;
+                this.$store.dispatch('makeChild', {nodeID: this.draggingNodeID, newParentID: nodeData.id});
             },
             registerDropAfter: function(e, nodeData) {
-                if (this.draggingNodeID == nodeData.id) return;
-                let draggedNode = this.nodes.find(node => node.id == this.draggingNodeID);
-                if (draggedNode.previousSibling == nodeData.id) return;
-                let oldSiblings = this.getChildren(draggedNode.parent);
-                let oldPrevious = oldSiblings.find(node => node.previousSibling == this.draggingNodeID)
-                if (oldPrevious != null) {
-                    oldPrevious.previousSibling = draggedNode.previousSibling;
-                }
-                // set whoever had target as previous to use me.
-                let newSiblings;
-                if (nodeData.parent == draggedNode.parent) {
-                    newSiblings = oldSiblings;
-                } else {
-                    newSiblings = this.getChildren(nodeData.parent);
-                }
-                if (newSiblings.length > 0) {
-                    let nowAfterMe = newSiblings.find(node => node.previousSibling == nodeData.id)
-                    if (nowAfterMe != null) {
-                        nowAfterMe.previousSibling = draggedNode.id;
-                    }
-                }
-                // set my previous to target
-                draggedNode.previousSibling = nodeData.id;
-                // set parent to target's parent
-                draggedNode.parent = nodeData.parent;
+                this.$store.dispatch('moveAfter', {nodeID: this.draggingNodeID, newPreviousID: nodeData.id});
             },
             openContextMenu: function(e, id) {
                 this.$refs.vuetreemenu.open(e, id);
             },
             beginAddChildNode: function(id) {
-                console.log(id)
+                this.$store.dispatch('addNode', {parent: id})
             },
             editNodeText: function(id) {
-                console.log(id)
+                this.editing = id;
+            },
+            endEditText: function(nodeID, newText) {
+                this.editing = null;
+                this.$store.commit('editText', {nodeID, newValue: newText})
+            },
+            reselectDescendants: function(nodeID, newValue) {
+                this.$store.dispatch('selectNode', {nodeID, newValue})
             },
             // editNodeIcon: function(id) {
             //     console.log(id)
             // },
+            makeRootNode: function() {
+                this.$store.dispatch('addNode', {})
+            },
             deleteNode: function(id) {
-                console.log(id)
+                this.$store.dispatch('deleteNode', id)
             },
         },
         computed: {
             rootNodes: function() {
-                return this.getChildren(null);
+                return this.$store.getters.getNodeChildren(null);
+            },
+            dragging: function() {
+                return this.$store.getters.getNode(this.draggingNodeID);
+            }
+        },
+        watch: {
+            singleCheck: function(newValue, oldvalue) {
+                this.$store.dispatch('changeSingleCheck', newValue);
+            },
+            separateSelection: function(newValue, oldvalue) {
+                this.$store.dispatch('changeSeparateSelection', newValue);
+            },
+        },
+        created: function() {
+            if (this.singleCheck) {
+                this.$store.dispatch('changeSingleCheck', true);
+            } else if (!this.separateSelection) {
+                this.$store.dispatch('changeSeparateSelection', false);
             }
         },
         components: {
@@ -166,5 +137,13 @@
 
     .v-context li {
         border-bottom: 1px #CCC solid !important;
+    }
+
+    .tree {
+        margin-bottom: 0.1em;
+    }
+
+    .newNodeButton {
+        margin-left: 1.5em;
     }
 </style>

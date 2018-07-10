@@ -1,7 +1,7 @@
 <template>
     <li :class="classes" draggable @dragstart.stop="startBeingDragged" @dragend.stop.prevent="endBeingDragged" @drop.stop.prevent="dropped" >
-      <div class="node-drag-target" @dragenter.stop.prevent="dragEnter" @dragover.stop.prevent="dragEnter" @dragexit.prevent="dragExit" @dragleave.prevent="dragExit"
-      @contextmenu.prevent="context($event, data.id)">
+      <div class="node-drag-target" @dragenter.stop.prevent="dragEnter" @dragover.stop.prevent="dragEnter" @dragexit.prevent="dragExit" @dragleave.prevent="dragExit" 
+      @contextmenu.stop.prevent="context($event, data.id)">
         <div class="expander" @click.stop="toggleExpand">
           <template v-if="expandIcon && !isLeaf">
             <icon :name="expandIcon" :scale="1" />
@@ -13,17 +13,25 @@
         ><input type="checkbox" :checked="data.checked" :indeterminate.prop="data.checked=='indet'" @click.prevent.stop="toggleChecked"
         ><label class="tree-node-label" @click.stop="toggleSelect"
           ><icon :name="data.icon" :scale="1" :color="data.iconColor" class="tree-icon"
-          /><div v-if="!editingText">
+          /><div v-if="!(editing == data.id)">
             {{ data.text }}
           </div
-          ><input type="text" v-else v-model="data.text" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
+          ><input type="text" v-else v-model="editedText" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
         /></label>
       <ul v-if="expanded && !isLeaf">
-        <TreeNode v-for="node in children" :key="node.id" :data="node" :onCheckedChange="onCheckedChange" :onSelectedChange="onSelectedChange" :getChildren="getChildren"
-        :dragging="dragging" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context" />
+        <TreeNode v-for="node in children" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren"
+        :dragging="dragging" :editing="editing" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context" />
       </ul>
         <div v-if="dragging && currentlyDraggedOver && !beingDragged" :class="{dropAfterTarget: true, dropAfterTargetHover: currentlyDraggedOverNext}" 
         @dragenter.prevent="showAsNext" @dragover.prevent="showAsNext" @dragexit.prevent="stopShowAsNext" @dragleave.prevent="stopShowAsNext" @drop.stop.prevent="droppedAfter">
+          <template v-if="currentlyDraggedOverNext">
+            <div class="no-icon" style="display: inline-block"
+            /><input type="checkbox" :checked="dragging.checked" :indeterminate.prop="dragging.checked=='indet'"
+            /><label class="tree-node-label"
+              ><icon v-if="dragging.icon" :name="dragging.icon" :scale="1" :color="dragging.iconColor" class="tree-icon"
+              />{{ dragging.text }}
+            </label>
+          </template>
         </div>
       </div>
     </li>
@@ -34,7 +42,7 @@ export default {
   name: 'TreeNode',
   data: function() {
     return {
-      editingText: false,
+      editedText: "",
       expanded: false,
       beingDragged: false,
       currentlyDraggedOver: false,
@@ -44,9 +52,14 @@ export default {
   props: {
     data: {type: Object, required: true,},
     getChildren: {type: Function, required: false, default: null},
-    onCheckedChange: {type: Function, required: false, default: null},
-    onSelectedChange: {type: Function, required: false, default: null},
-    dragging:  {type: Boolean, required: false, default: false},
+    onCheckChange: {type: Function, required: false, default: null},
+    onSelectChange: {type: Function, required: false, default: null},
+    updateCheck: {type: Function, required: false, default: null},
+    updateSelect: {type: Function, required: false, default: null},
+    dragging:  {type: Object, required: false},
+    editing:  {type: [Number, String], required: false},
+    endEditText: {type: Function, required: false, default: null},
+    reselectDescendants: {type: Function, required: false, default: null},
     beginDrag: {type: Function, required: false, default: null},
     endDrag: {type: Function, required: false, default: null},
     registerDrop: {type: Function, required: false, default: null},
@@ -55,31 +68,29 @@ export default {
   },
   methods: {
     beginUpdate: function() {
-      this.editingText = true;
-      this.$emit('beginUpdate');
+      this.editedText = this.data.text;
     },
     endUpdate: function() {
-      this.editingText = false;
-      this.$emit('endUpdate');
+      this.endEditText(this.data.id, this.editedText);
+      //this.$emit('endUpdate');
     },
     toggleChecked: function() {
-      this.onCheckedChange(this.data.id, !this.data.checked)
+      this.updateCheck(this.data.id, !this.data.checked)
     },
     toggleSelect: function() {
-      this.onSelectedChange(this.data.id, !this.data.selected)
-    },
-    toggleUpdate: function() {
-      if (!this.editingText) {
-        this.beginUpdate();
-      } else {
-        this.endUpdate();
-      }
+      this.updateSelect(this.data.id, !this.data.selected)
     },
     toggleExpand: function() {
       this.expanded = !this.expanded;
+      if (!this.expanded && !this.data.selected) {
+        this.reselectDescendants(this.data.id, false);
+      }
     },
     startBeingDragged: function($event) {
       this.beingDragged = true;
+      if (this.expanded) {
+        this.toggleExpand();
+      }
       this.beginDrag($event, this.data);
     },
     endBeingDragged: function($event) {
@@ -88,10 +99,12 @@ export default {
     },
     dropped: function($event) {
       this.currentlyDraggedOver = false;
+      this.currentlyDraggedOverNext = false;
       this.registerDrop($event, this.data)
     },
     droppedAfter: function($event) {
       this.currentlyDraggedOver = false;
+      this.currentlyDraggedOverNext = false;
       this.registerDropAfter($event, this.data)
     },
     dragEnter: function() {
@@ -116,6 +129,7 @@ export default {
         "leaf" : this.isLeaf,
         "root" : this.isRoot,
         "highlighted" : this.currentlyDraggedOver,
+        "dragged" : this.beingDragged,
       }
     },
     isRoot: function() {
@@ -135,9 +149,22 @@ export default {
     },
     children: function() {
       return this.getChildren(this.data.id);
-    }
+    },
   },
   watch: {
+    editing: function(newValue, oldvalue) {
+      if (newValue) {
+        this.beginUpdate();
+      }
+    },
+    'data.checked': function(newValue, oldValue) {
+      if (newValue != 'indet') {
+        this.onCheckChange(this.data.id, newValue);
+      }
+    },
+    'data.selected': function(newValue, oldValue) {
+      this.onSelectChange(this.data.id, newValue);
+    },
   },
   mounted: function() {
   }
@@ -145,7 +172,7 @@ export default {
 </script>
 <style>
   .tree-node > *, .tree-node-label > *, .node-drag-target > * {
-      display: inline-block;
+    display: inline-block;
   }
   .tree-node.selected > .node-drag-target {
     background-color: #999;
@@ -153,6 +180,15 @@ export default {
 
   .tree-node.highlighted > .node-drag-target {
     background-color: #CCC;
+  }
+
+  .tree-node.dragged > .node-drag-target {
+    /*display: none;*/
+    background-color: #AAA;
+  }
+
+  .node-drag-target {
+    width: 100%;
   }
 
   .tree-icon {
@@ -164,7 +200,7 @@ export default {
     padding: 0 2px 0 2px;
   }
   /* Hide the default list bubbles */
-  ul.tree, .tree-node > ul {
+  ul.tree, .tree-node ul {
     list-style: none;
     padding-left: 1em;
   }
@@ -230,11 +266,11 @@ export default {
     left: 0;
     height: 0.4em;
     width: 100%;
-    background-color: black;
+    background-color: #999;
   }
 
   .dropAfterTargetHover {
     height: 1em;
-    background-color: #000;
+    background-color: #999;
   }
 </style>

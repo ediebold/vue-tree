@@ -6,7 +6,7 @@
             <div style="width:840px; margin: 0 auto;">
                 <div style="width: 200px; text-align: left; display:inline-block; vertical-align: top;">
                     <br />
-                    <v-tree />
+                    <v-tree :treeEvents="treeEvents" :separateSelection="false" :singleCheck="false" />
                     <br />
                 </div>
             </div>
@@ -19,7 +19,14 @@
         name: 'app',
         data () {
             return {
-                msg: 'A Tree Plugin For Vue2', 
+                msg: 'A Tree Plugin For Vue2',
+                treeEvents: {
+                    checked: function(id, newValue){console.log('checked', id, newValue)},
+                    selected: function(id, newValue){console.log('selected', id, newValue)},
+                    contextOptions: [
+                        //{label: "test", func: function(id){console.log("test", id)}},
+                    ],
+                } 
             }
         }
     }
