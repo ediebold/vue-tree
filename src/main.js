@@ -6,7 +6,7 @@ Vue.use(Vuex)
 
 import VuexTree from './modules/VuexTree.js'
 
-const store = new Vuex.Store({ modules: {tree: VuexTree}})
+const store = new Vuex.Store({ modules: {tree2: VuexTree}})
 
 import VTree from './index.js'
 Vue.use(VTree)

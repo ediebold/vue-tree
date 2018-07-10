@@ -1,4 +1,5 @@
 export default {
+  namespaced: true,
   state: { 
     nodes: [],
     singleCheckOnly: false,
@@ -73,7 +74,12 @@ export default {
   },
   getters: {
     getCheckedNodes (state) {
-      return state.nodes.filter(node => node.checked === true)
+      let checkedNodes = state.nodes.filter(node => node.checked === true);
+      if (checkedNodes.length > 1 && state.singleCheckOnly) {
+        let parentIDs = checkedNodes.map(node => node.parent);
+        return [checkedNodes.find(node => !parentIDs.includes(node.id))];
+      }
+      return checkedNodes;
     },
     getSelectedNodes (state) {
       return state.nodes.filter(node => node.selected)
@@ -141,15 +147,13 @@ export default {
       let oldValue = node.checked
       if (oldValue != newValue) {
           context.dispatch('checkSelfAndDescendants', {nodeID: node.id, oldValue: node.checked, newValue});
-          if (!context.state.singleCheckOnly) {
-            context.dispatch('updateCheck', node.parent);
-          }
+          context.dispatch('updateCheck', node.parent);
       }
     },
     checkSelfAndDescendants(context, {nodeID, oldValue, newValue}) {
       if (oldValue != newValue) {
         context.commit('checkNode', {nodeID, newValue})
-        if (context.state.singleCheckOnly) return;
+        if (context.state.singleCheckOnly && newValue) return;
         for (let child of context.getters.getNodeChildren(nodeID)) {
           context.dispatch('checkSelfAndDescendants', {nodeID: child.id, oldValue: child.checked,  newValue});
         }

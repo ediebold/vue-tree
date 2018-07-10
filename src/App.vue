@@ -6,7 +6,7 @@
             <div style="width:840px; margin: 0 auto;">
                 <div style="width: 200px; text-align: left; display:inline-block; vertical-align: top;">
                     <br />
-                    <v-tree :treeEvents="treeEvents" :separateSelection="false" :singleCheck="false" />
+                    <v-tree :treeEvents="treeEvents" :separateSelection="false" :singleCheck="true" namespace="tree2" />
                     <br />
                 </div>
             </div>

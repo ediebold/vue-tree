@@ -10,7 +10,7 @@
             <div class="no-icon" />
           </template>
         </div
-        ><input type="checkbox" :checked="data.checked" :indeterminate.prop="data.checked=='indet'" @click.prevent.stop="toggleChecked"
+        ><input type="checkbox" :checked="data.checked" :indeterminate.prop="data.checked=='indet'" @click.prevent.stop="toggleChecked" :disabled="singleCheck && !isLeaf"
         ><label class="tree-node-label" @click.stop="toggleSelect"
           ><icon :name="data.icon" :scale="1" :color="data.iconColor" class="tree-icon"
           /><div v-if="!(editing == data.id)">
@@ -19,7 +19,7 @@
           ><input type="text" v-else v-model="editedText" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
         /></label>
       <ul v-if="expanded && !isLeaf">
-        <TreeNode v-for="node in children" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren"
+        <TreeNode v-for="node in children" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren" :singleCheck="singleCheck"
         :dragging="dragging" :editing="editing" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context" />
       </ul>
         <div v-if="dragging && currentlyDraggedOver && !beingDragged" :class="{dropAfterTarget: true, dropAfterTargetHover: currentlyDraggedOverNext}" 
@@ -51,6 +51,7 @@ export default {
   },
   props: {
     data: {type: Object, required: true,},
+    singleCheck: {type: Boolean, required: false, default: null},
     getChildren: {type: Function, required: false, default: null},
     onCheckChange: {type: Function, required: false, default: null},
     onSelectChange: {type: Function, required: false, default: null},

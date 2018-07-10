@@ -13,7 +13,7 @@
             </ul>
         </vue-context>
         <ul class="tree"> 
-            <TreeNode v-for="node in rootNodes" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren"
+            <TreeNode v-for="node in rootNodes" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren" :singleCheck="singleCheck"
             :dragging="dragging" :editing="editing" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="openContextMenu"  />
         </ul>
         <button class="newNodeButton" @click="makeRootNode">New Root Node</button>
@@ -33,16 +33,17 @@
             }
         },
         props: {
+            namespace: {type: String, required: true},
             treeEvents: {type: Object, required: false, default: {}},
             separateSelection: {type: Boolean, required: false, default: true},
             singleCheck: {type: Boolean, required: false, default: false},
         },
         methods: {
             updateCheck: function(id, newValue) {
-                this.$store.dispatch('checkNode', {nodeID: id, newValue})
+                this.$store.dispatch(this.namespace + '/checkNode', {nodeID: id, newValue})
             },
             updateSelect: function(id, newValue) {
-                this.$store.dispatch('selectNode', {nodeID: id, newValue})
+                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: id, newValue})
             },
             onCheckChange: function(id, newValue) {
                 this.treeEvents.checked(id, newValue);
@@ -57,61 +58,62 @@
                 this.draggingNodeID = null;
             },
             getChildren: function(id) {
-                return this.$store.getters.getNodeChildren(id);
+                return this.$store.getters[this.namespace + '/getNodeChildren'](id);
             },
             registerDrop: function(e, nodeData) {
-                this.$store.dispatch('makeChild', {nodeID: this.draggingNodeID, newParentID: nodeData.id});
+                this.$store.dispatch(this.namespace + '/makeChild', {nodeID: this.draggingNodeID, newParentID: nodeData.id});
             },
             registerDropAfter: function(e, nodeData) {
-                this.$store.dispatch('moveAfter', {nodeID: this.draggingNodeID, newPreviousID: nodeData.id});
+                this.$store.dispatch(this.namespace + '/moveAfter', {nodeID: this.draggingNodeID, newPreviousID: nodeData.id});
             },
             openContextMenu: function(e, id) {
                 this.$refs.vuetreemenu.open(e, id);
             },
             beginAddChildNode: function(id) {
-                this.$store.dispatch('addNode', {parent: id})
+                this.$store.dispatch(this.namespace + '/addNode', {parent: id})
             },
             editNodeText: function(id) {
                 this.editing = id;
             },
             endEditText: function(nodeID, newText) {
                 this.editing = null;
-                this.$store.commit('editText', {nodeID, newValue: newText})
+                this.$store.commit(this.namespace + '/editText', {nodeID, newValue: newText})
             },
             reselectDescendants: function(nodeID, newValue) {
-                this.$store.dispatch('selectNode', {nodeID, newValue})
+                this.$store.dispatch(this.namespace + '/selectNode', {nodeID, newValue})
             },
             // editNodeIcon: function(id) {
             //     console.log(id)
             // },
             makeRootNode: function() {
-                this.$store.dispatch('addNode', {})
+                this.$store.dispatch(this.namespace + '/addNode', {})
             },
             deleteNode: function(id) {
-                this.$store.dispatch('deleteNode', id)
+                this.$store.dispatch(this.namespace + '/deleteNode', id)
             },
         },
         computed: {
             rootNodes: function() {
-                return this.$store.getters.getNodeChildren(null);
+                return this.$store.getters[this.namespace + '/getNodeChildren'](null);
             },
             dragging: function() {
-                return this.$store.getters.getNode(this.draggingNodeID);
+                return this.$store.getters[this.namespace + '/getNode'](this.draggingNodeID);
             }
         },
         watch: {
             singleCheck: function(newValue, oldvalue) {
-                this.$store.dispatch('changeSingleCheck', newValue);
+                this.$store.dispatch(this.namespace + '/changeSingleCheck', newValue);
             },
             separateSelection: function(newValue, oldvalue) {
-                this.$store.dispatch('changeSeparateSelection', newValue);
+                this.$store.dispatch(this.namespace + '/changeSeparateSelection', newValue);
             },
         },
         created: function() {
             if (this.singleCheck) {
-                this.$store.dispatch('changeSingleCheck', true);
-            } else if (!this.separateSelection) {
-                this.$store.dispatch('changeSeparateSelection', false);
+                this.$store.dispatch(this.namespace + '/changeSingleCheck', true);
+            }
+            if (!this.separateSelection) {
+                this.$store.dispatch(this.namespace + '/changeSeparateSelection', false);
             }
         },
         components: {
