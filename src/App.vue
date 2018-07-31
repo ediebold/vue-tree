@@ -4,32 +4,52 @@
         <h2>Tree View</h2>
         <div>
             <div style="width:840px; margin: 0 auto;">
-                <div style="width: 200px; text-align: left; display:inline-block; vertical-align: top;">
+                <div style="width: 200px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
                     <br />
-                    <v-tree :treeEvents="treeEvents" :separateSelection="false" :singleCheck="true" namespace="tree2" />
+                    <v-tree :treeEvents="treeEvents" :separateSelection="true" :singleCheck="false" :namespace="namespace" :useImageIcons="false" :allowedChildrenCheck="allowedChildrenCheckTest" />
                     <br />
                 </div>
+                <button style="clear: both; display: block;" @click="insertUnsorted">Test Unsorted Insert</button>
             </div>
         </div>
     </div>
 </template>
 
 <script>
-    export default {
-        name: 'app',
-        data () {
-            return {
-                msg: 'A Tree Plugin For Vue2',
-                treeEvents: {
-                    checked: function(id, newValue){console.log('checked', id, newValue)},
-                    selected: function(id, newValue){console.log('selected', id, newValue)},
-                    contextOptions: [
-                        //{label: "test", func: function(id){console.log("test", id)}},
-                    ],
-                } 
+export default {
+    name: 'app',
+    data () {
+        return {
+            namespace: "tree2",
+            msg: 'A Tree Plugin For VueX',
+            treeEvents: {
+                checked: function(id, newValue){console.log('checked', id, newValue)},
+                selected: function(id, newValue){console.log('selected', id, newValue)},
+                contextOptions: [
+                    {label: "test", func: function(id){console.log("test", id)}},
+                ],
+            } 
+        }
+    },
+    methods: {
+        insertUnsorted: function() {
+            let unsorted = [
+                {id: 11, parent: 10, text: "test child"},
+                {id: 10, text: "test parent"},
+                {id: 12, parent: 10, text: "test child3"},
+                // TODO: The following line breaks addition, since 12 has it's prev set to 11 during it's passthrough.
+                //{id: 13, previousSibling: 11, parent: 10, text: "test child2"},
+            ]
+            this.$store.dispatch(this.namespace + '/addNodes', unsorted);
+        },
+        allowedChildrenCheckTest: function(nodeData) {
+            if (nodeData.text.includes("NOCHILD")) {
+                return false;
             }
+            return true;
         }
     }
+}
 </script>
 
 <style>

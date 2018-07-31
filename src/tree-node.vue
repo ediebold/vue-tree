@@ -4,7 +4,7 @@
       @contextmenu.stop.prevent="context($event, data.id)">
         <div class="expander" @click.stop="toggleExpand">
           <template v-if="expandIcon && !isLeaf">
-            <icon :name="expandIcon" :scale="1" />
+            <font-awesome-icon :icon="expandIcon" />
           </template>
           <template v-else>
             <div class="no-icon" />
@@ -12,15 +12,17 @@
         </div
         ><input type="checkbox" :checked="data.checked" :indeterminate.prop="data.checked=='indet'" @click.prevent.stop="toggleChecked" :disabled="singleCheck && !isLeaf"
         ><label class="tree-node-label" @click.stop="toggleSelect"
-          ><icon :name="data.icon" :scale="1" :color="data.iconColor" class="tree-icon"
-          /><div v-if="!(editing == data.id)">
+          ><font-awesome-icon v-if="!useImageIcons && data.icon.length > 0" :icon="data.icon" :style="{color: data.iconColor}" class="tree-icon"
+          /><img class="tree-icon" v-else-if="useImageIcons" :src="data.icon"
+          /><div :title="data.text" class="tree-text" v-if="!(editing == data.id)">
             {{ data.text }}
           </div
-          ><input type="text" v-else v-model="editedText" v-autowidth @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
+          ><input type="text" v-else v-model="editedText" v-autowidth="{maxWidth: '80%'}" @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
         /></label>
       <ul v-if="expanded && !isLeaf">
-        <TreeNode v-for="node in children" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :onCheckChange="onCheckChange" :onSelectChange="onSelectChange" :getChildren="getChildren" :singleCheck="singleCheck"
-        :dragging="dragging" :editing="editing" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context" />
+        <TreeNode v-for="node in children" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :getChildren="getChildren" :singleCheck="singleCheck"
+        :dragging="dragging" :editing="editing" :editingIcon="editingIcon" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="context"
+        :useImageIcons="useImageIcons" />
       </ul>
         <div v-if="dragging && currentlyDraggedOver && !beingDragged" :class="{dropAfterTarget: true, dropAfterTargetHover: currentlyDraggedOverNext}" 
         @dragenter.prevent="showAsNext" @dragover.prevent="showAsNext" @dragexit.prevent="stopShowAsNext" @dragleave.prevent="stopShowAsNext" @drop.stop.prevent="droppedAfter">
@@ -53,12 +55,12 @@ export default {
     data: {type: Object, required: true,},
     singleCheck: {type: Boolean, required: false, default: null},
     getChildren: {type: Function, required: false, default: null},
-    onCheckChange: {type: Function, required: false, default: null},
-    onSelectChange: {type: Function, required: false, default: null},
     updateCheck: {type: Function, required: false, default: null},
     updateSelect: {type: Function, required: false, default: null},
     dragging:  {type: Object, required: false},
     editing:  {type: [Number, String], required: false},
+    editingIcon: {type: [Number, String], required: false},
+    useImageIcons: {type: Boolean, required: false},
     endEditText: {type: Function, required: false, default: null},
     reselectDescendants: {type: Function, required: false, default: null},
     beginDrag: {type: Function, required: false, default: null},
@@ -158,17 +160,7 @@ export default {
         this.beginUpdate();
       }
     },
-    'data.checked': function(newValue, oldValue) {
-      if (newValue != 'indet') {
-        this.onCheckChange(this.data.id, newValue);
-      }
-    },
-    'data.selected': function(newValue, oldValue) {
-      this.onSelectChange(this.data.id, newValue);
-    },
   },
-  mounted: function() {
-  }
 }
 </script>
 <style>
@@ -195,6 +187,7 @@ export default {
   .tree-icon {
     vertical-align: top;
     padding: 0 2px 0 2px;
+    width: 1em;
   }
   .tree-node-label {
     cursor: default;
@@ -273,5 +266,22 @@ export default {
   .dropAfterTargetHover {
     height: 1em;
     background-color: #999;
+  }
+
+  .node-drag-target {
+    overflow: hidden;
+    vertical-align: bottom;
+  }
+
+  .tree-node-label {
+    width: 80%;
+  }
+
+  .tree-text {
+    width: 80%;
+    overflow: hidden;
+    vertical-align: bottom;
+    word-wrap: nowrap;
+    text-overflow: ellipsis;
   }
 </style>

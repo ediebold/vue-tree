@@ -1,15 +1,12 @@
 import Vue from 'vue'
-
 import Vuex from 'vuex'
 
 Vue.use(Vuex)
 
-import VuexTree from './modules/VuexTree.js'
+import VuexTree from './index.js'
+Vue.use(VuexTree.VTree)
 
-const store = new Vuex.Store({ modules: {tree2: VuexTree}})
-
-import VTree from './index.js'
-Vue.use(VTree)
+const store = new Vuex.Store({ modules: {tree2: VuexTree.VuexTree}})
 
 import App from './App.vue'
 

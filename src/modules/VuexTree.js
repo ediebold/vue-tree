@@ -4,11 +4,14 @@ export default {
     nodes: [],
     singleCheckOnly: false,
     separateSelection: true,
+    newIDCount: 0,
+    allowedChildrenCheck: null,
   },
   mutations: {
-    addNode(state, node) {
-      state.nodes.push(node)
-      //Vue.set(state.nodes, node.id, node)
+    addNodes(state, nodes) {
+      for (let node of nodes) {
+        state.nodes.push(node)
+      }
     },
     checkNode(state, {nodeID, newValue}) {
       let node = state.nodes.find(node => node.id == nodeID);
@@ -38,6 +41,10 @@ export default {
     editText(state, {nodeID, newValue}) {
       let node = state.nodes.find(node => node.id == nodeID);
       node.text = newValue;
+    },
+    editIcon(state, {nodeID, newValue}) {
+      let node = state.nodes.find(node => node.id == nodeID);
+      node.icon = newValue;
     },
     moveNode(state, {nodeID, newParentID, newPreviousID, newNextID, oldNextID}) {
       let node = state.nodes.find(node => node.id == nodeID);
@@ -71,6 +78,12 @@ export default {
     setSeparateSelection(state, newValue) {
       state.separateSelection = newValue;
     },
+    incrementNewIDCount(state) {
+      state.newIDCount += 1;
+    },
+    setAllowedChildrenCheck(state, newValue) {
+      state.allowedChildrenCheck = newValue;
+    }
   },
   getters: {
     getCheckedNodes (state) {
@@ -85,7 +98,7 @@ export default {
       return state.nodes.filter(node => node.selected)
     },
     getNodeChildren: (state) => (id) => {
-      if (typeof id === 'undefined') {
+      if (id === undefined) {
         id = null;
       }
       let unsortedChildren = state.nodes.filter(node => node.parent == id);
@@ -106,34 +119,76 @@ export default {
     getNextSiblingNode: (state) => (id) => {
       return state.nodes.find(node => node.previousSibling == id);
     },
+    getNewIDCount (state) {
+      return state.newIDCount;
+    },
+    getLeaves (state) {
+      return state.nodes.filter(node => state.nodes.filter(innerNode => innerNode.parent = node.id).length === 0);
+    }
   },
   actions: {
-    addNodes(context, nodes) {
-      for (let node of nodes) {
-        context.dispatch('addNode', node)
+    addNodes(context, rawNodes) {
+      let nodes = [];
+      let parents = [];
+      let newLastChild = {};
+      for (let rawNode of rawNodes) {
+        let node = {};
+        if (rawNode.id !== undefined && context.getters.getNode(rawNode.id)) {
+          console.error("A tree entry with id " + rawNode.id + " already exists");
+          continue;
+        }
+        node.id = rawNode.id || "t" + context.getters.getNewIDCount;
+        if (typeof node.id === 'string') {
+          context.commit('incrementNewIDCount');
+        }
+        node.text = rawNode.text || "New Node";
+        node.icon = rawNode.icon || "";
+        node.checked = rawNode.checked || false;
+        node.selected = rawNode.selected || false;
+        node.parent = rawNode.parent || null;
+        if (node.parent && context.state.allowedChildrenCheck != null && !context.state.allowedChildrenCheck(context.getters.getNode(node.parent))) {
+          console.error("Node " + node.parent + " is not allowed to have children.");
+          continue;
+        }
+        if (parents.indexOf(node.parent) === -1) {
+          parents.push(node.parent);
+        }
+        let previousSibling = null;
+        if (rawNode.previousSibling === undefined) {
+          if (newLastChild[node.parent] !== undefined) {
+            previousSibling = newLastChild[node.parent];
+            newLastChild[node.parent] = node.id;
+          } else {
+            let siblings = context.getters.getNodeChildren(node.parent)
+            if (siblings.length > 0) {
+              previousSibling = siblings[siblings.length - 1].id
+            }
+            newLastChild[node.parent] = node.id;
+          }
+        }
+        node.previousSibling = rawNode.previousSibling || previousSibling;
+        
+        let child = nodes.findIndex(prevNode => prevNode.parent == node.id);
+        let prev = nodes.findIndex(prevNode => prevNode.previousSibling == node.id);
+        if (child === -1 && prev === -1) {
+          nodes.push(node);
+        } else if (child === -1) {
+          nodes.splice(child, 0, node);
+        } else if (prev === -1) {
+          nodes.splice(prev, 0, node);
+        } else {
+          nodes.splice(Math.min(child, prev), 0, node);
+        }
+      }
+
+      context.commit('addNodes', nodes)
+      for (let parent of parents) {
+        context.dispatch('updateCheck', parent);
+        context.dispatch('updateSelect', parent);
       }
     },
     addNode (context, rawNode) {
-      let node = {};
-      node.id = rawNode.id || "t" + Math.floor(Date.now()); //TODO: need to filter out duplicates
-      node.text = rawNode.text || "New Node";
-      node.checked = rawNode.checked || false;
-      node.selected = rawNode.selected || false;
-      node.parent = rawNode.parent || null;
-      let previousSibling = null;
-      if (typeof rawNode.previousSibling === 'undefined') {
-          let siblings = context.getters.getNodeChildren(node.parent)
-          if (siblings.length > 0) {
-              previousSibling = siblings[siblings.length - 1].id
-          }
-      }
-      node.previousSibling = rawNode.previousSibling || previousSibling;
-      node.editingText = false;
-      context.commit('addNode', node)
-      if (node.parent != null) {
-        context.dispatch('updateCheck', node.parent);
-        context.dispatch('updateSelect', node.parent);
-      }
+      context.dispatch('addNodes', [rawNode]);
     },
     checkNode(context, {nodeID, newValue}) {
       // Uncheck other if in single check mode
@@ -275,5 +330,8 @@ export default {
       context.commit('reselectAll', false);
       context.commit('setSeparateSelection', newValue);
     },
-  }
+    changeAllowedChildrenCheck(context, newValue) {
+      context.commit('setAllowedChildrenCheck', newValue);
+    },
+  },
 }
