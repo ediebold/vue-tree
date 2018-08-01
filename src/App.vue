@@ -10,6 +10,10 @@
                     <br />
                 </div>
                 <button style="clear: both; display: block;" @click="insertUnsorted">Test Unsorted Insert</button>
+                <button v-for="state in states" @click="loadState(state)">{{ state }}</button>
+                <hr />
+                <input type="text" v-model="newStateName" />
+                <button @click="saveState(newStateName)">Save Current State</button>
             </div>
         </div>
     </div>
@@ -28,7 +32,8 @@ export default {
                 contextOptions: [
                     {label: "test", func: function(id){console.log("test", id)}},
                 ],
-            } 
+            },
+            newStateName: "",
         }
     },
     methods: {
@@ -47,6 +52,17 @@ export default {
                 return false;
             }
             return true;
+        },
+        saveState: function(stateName) {
+            this.$store.commit(this.namespace + "/saveState", stateName);
+        },
+        loadState: function(stateName) {
+            this.$store.dispatch(this.namespace + "/switchState", stateName);
+        },
+    },
+    computed: {
+        states: function() {
+            return this.$store.getters[this.namespace + '/getStates'];
         }
     }
 }

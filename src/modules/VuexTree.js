@@ -1,3 +1,5 @@
+import Vue from 'vue';
+
 export default {
   namespaced: true,
   state: { 
@@ -6,11 +8,19 @@ export default {
     separateSelection: true,
     newIDCount: 0,
     allowedChildrenCheck: null,
+    states: { default: {}},
   },
   mutations: {
     addNodes(state, nodes) {
       for (let node of nodes) {
+        let defaultCheck = node.checked;
+        if (defaultCheck == null && node.parent) {
+          let parent = state.nodes.find(parentNode => parentNode.id == node.parent);
+          node.checked = parent.checked === true ? true : false;
+          defaultCheck = state.states.default[parent.id] === true ? true : false;
+        }
         state.nodes.push(node)
+        Vue.set(state.states.default, node.id, defaultCheck);
       }
     },
     checkNode(state, {nodeID, newValue}) {
@@ -83,7 +93,36 @@ export default {
     },
     setAllowedChildrenCheck(state, newValue) {
       state.allowedChildrenCheck = newValue;
-    }
+    },
+    saveState(state, stateName) {
+      if (stateName == "default") {
+        let defaults = {};
+        for (let node of state.nodes) {
+          defaults[node.id] = node.checked;
+        }
+        Vue.set(state.states, 'default', defaults);
+        return;
+      }
+      let defaults = state.states.default;
+      let newState = {};
+      for (let node of state.nodes) {
+        if (node.checked != defaults[node.id]) {
+          newState[node.id] = node.checked;
+        }
+      }
+      Vue.set(state.states, stateName, newState);
+    },
+    switchState(state, stateName) {
+      if(!state.states[stateName]) {
+        console.error("State " + stateName + " could not be found.");
+        return;
+      }
+      let goalState = state.states[stateName];
+      let defaults = state.states.default;
+      for (let node of state.nodes) {
+        node.checked = goalState[node.id] || defaults[node.id];
+      }
+    },
   },
   getters: {
     getCheckedNodes (state) {
@@ -124,6 +163,9 @@ export default {
     },
     getLeaves (state) {
       return state.nodes.filter(node => state.nodes.filter(innerNode => innerNode.parent = node.id).length === 0);
+    },
+    getStates(state) {
+      return Object.keys(state.states);
     }
   },
   actions: {
@@ -143,12 +185,9 @@ export default {
         }
         node.text = rawNode.text || "New Node";
         node.icon = rawNode.icon || "";
-        node.checked = rawNode.checked || false;
-        node.selected = rawNode.selected || false;
         node.parent = rawNode.parent || null;
         if (node.parent && context.state.allowedChildrenCheck != null) {
           let parent =  context.getters.getNode(node.parent) || rawNodes.find(parentNode => parentNode.id === node.parent);
-          console.log(parent);
           if (!context.state.allowedChildrenCheck(parent)) {
             console.error("Node " + node.parent + " is not allowed to have children.");
             continue;
@@ -157,6 +196,11 @@ export default {
         if (parents.indexOf(node.parent) === -1) {
           parents.push(node.parent);
         }
+        node.checked = rawNode.checked || null;
+        if (node.checked == null && !node.parent) {
+          node.checked = false;
+        }
+        node.selected = rawNode.selected || false;
         let previousSibling = null;
         if (rawNode.previousSibling === undefined) {
           if (newLastChild[node.parent] !== undefined) {
@@ -337,5 +381,12 @@ export default {
     changeAllowedChildrenCheck(context, newValue) {
       context.commit('setAllowedChildrenCheck', newValue);
     },
+    switchState(context, stateName) {
+      context.commit('switchState', stateName);
+      for (let node of Object.keys(context.state.states[stateName])) {
+        context.dispatch('checkSelfAndDescendants', {nodeID: node.id, oldValue: node.checked, newValue: context.state.states[stateName][node.id]});
+        context.dispatch('updateCheck', node.parent);
+      }
+    }
   },
 }
