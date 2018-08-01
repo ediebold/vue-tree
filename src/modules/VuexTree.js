@@ -146,9 +146,13 @@ export default {
         node.checked = rawNode.checked || false;
         node.selected = rawNode.selected || false;
         node.parent = rawNode.parent || null;
-        if (node.parent && context.state.allowedChildrenCheck != null && !context.state.allowedChildrenCheck(context.getters.getNode(node.parent))) {
-          console.error("Node " + node.parent + " is not allowed to have children.");
-          continue;
+        if (node.parent && context.state.allowedChildrenCheck != null) {
+          let parent =  context.getters.getNode(node.parent) || rawNodes.find(parentNode => parentNode.id === node.parent);
+          console.log(parent);
+          if (!context.state.allowedChildrenCheck(parent)) {
+            console.error("Node " + node.parent + " is not allowed to have children.");
+            continue;
+          }
         }
         if (parents.indexOf(node.parent) === -1) {
           parents.push(node.parent);
@@ -180,7 +184,7 @@ export default {
           nodes.splice(Math.min(child, prev), 0, node);
         }
       }
-
+      
       context.commit('addNodes', nodes)
       for (let parent of parents) {
         context.dispatch('updateCheck', parent);
