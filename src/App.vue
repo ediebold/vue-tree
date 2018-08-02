@@ -4,7 +4,7 @@
         <h2>Tree View</h2>
         <div>
             <div style="width:840px; margin: 0 auto;">
-                <div style="width: 200px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
+                <div style="font-size: 20px; width: 200px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
                     <br />
                     <v-tree :treeEvents="treeEvents" :separateSelection="true" :singleCheck="false" :namespace="namespace" :useImageIcons="false" :allowedChildrenCheck="allowedChildrenCheckTest" />
                     <br />

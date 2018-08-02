@@ -4,7 +4,7 @@
       @contextmenu.stop.prevent="context($event, data.id)">
         <div class="expander" @click.stop="toggleExpand">
           <template v-if="expandIcon && !isLeaf">
-            <font-awesome-icon :icon="expandIcon" />
+            <font-awesome-icon :icon="expandIcon" class="expand-icon" />
           </template>
           <template v-else>
             <div class="no-icon" />
@@ -182,6 +182,10 @@ export default {
 
   .node-drag-target {
     width: 100%;
+  }
+
+  .expand-icon {
+    width: 1em;
   }
 
   .tree-icon {
