@@ -31,12 +31,19 @@ export default {
                 selected: function(id, newValue){console.log('selected', id, newValue)},
                 contextOptions: [
                     {label: "test", func: function(id){console.log("test", id)}},
+                    {
+                        label: "Get Leaves", 
+                        func: this.consoleLeaves,
+                    },
                 ],
             },
             newStateName: "",
         }
     },
     methods: {
+        consoleLeaves: function(id) {
+            console.log(this.$store.getters[this.namespace + '/getLeaves'](id));
+        },
         insertUnsorted: function() {
             let unsorted = [
                 {id: 11, parent: 10, text: "test child"},

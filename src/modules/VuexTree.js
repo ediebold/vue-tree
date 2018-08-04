@@ -161,8 +161,25 @@ export default {
     getNewIDCount (state) {
       return state.newIDCount;
     },
-    getLeaves (state) {
+    getAllLeaves (state) {
       return state.nodes.filter(node => state.nodes.filter(innerNode => innerNode.parent = node.id).length === 0);
+    },
+    getLeaves: (state) => (id) => {
+      let leaves = [];
+      let checkChildren = state.nodes.filter(child => child.parent === id);
+      let newChildren = [];
+      let curNode = null;
+      if (checkChildren.length < 1) return [id];
+      while (checkChildren.length > 0) {
+        curNode = checkChildren.pop().id;
+        newChildren = state.nodes.filter(child => child.parent === curNode);
+        if (newChildren.length == 0) {
+          leaves.push(curNode);
+        } else {
+          checkChildren = checkChildren.concat(newChildren);
+        }
+      }
+      return leaves;
     },
     getStates(state) {
       return Object.keys(state.states);
