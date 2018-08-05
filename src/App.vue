@@ -27,7 +27,7 @@ export default {
             namespace: "tree2",
             msg: 'A Tree Plugin For VueX',
             treeEvents: {
-                checked: function(id, newValue){console.log('checked', id, newValue)},
+                checked: function(id, newValue){/*console.log('checked', id, newValue)*/},
                 selected: function(id, newValue){console.log('selected', id, newValue)},
                 contextOptions: [
                     {label: "test", func: function(id){console.log("test", id)}},
@@ -46,9 +46,12 @@ export default {
         },
         insertUnsorted: function() {
             let unsorted = [
-                {id: 11, parent: 10, text: "test child"},
-                {id: 10, text: "test parent"},
-                {id: 12, parent: 10, text: "test child3"},
+                {id: 1, parent: null, previousSibling: null, text: "test", checked: true},
+                {id: 2, parent: null, previousSibling: 1, text: "test2", checked: true},
+                {id: 3, parent: 1, previousSibling: null, text: "test child", checked: false},
+                {id: 4, parent: 1, previousSibling: 3, text: "test child 2", checked: true},
+                {id: 6, parent: 3, previousSibling: null, text: "test feature", checked: true},
+                {id: 7, parent: 3, previousSibling: 6, text: "test feature 2", checked: true},
                 // TODO: The following line breaks addition, since 12 has it's prev set to 11 during it's passthrough.
                 //{id: 13, previousSibling: 11, parent: 10, text: "test child2"},
             ]
