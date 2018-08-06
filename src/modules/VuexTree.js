@@ -251,15 +251,11 @@ export default {
           nodes.splice(Math.min(child, prev), 0, node);
         }
       }
-      console.log("immediately before add", nodes[0].id, nodes[0].parent)
       context.commit('addNodes', nodes)
-      console.log("immediately after add", nodes[0].id, nodes[0].parent)
-      console.log("immediately after ad2", context.state.nodes[0].id, context.state.nodes[0].parent)
       for (let parent of parents) {
         context.dispatch('updateCheck', parent);
         context.dispatch('updateSelect', parent);
       }
-      console.log(context.state);
     },
     addNode (context, rawNode) {
       context.dispatch('addNodes', [rawNode]);
@@ -290,7 +286,6 @@ export default {
     },
     updateCheck(context, nodeID) {
       if (nodeID == null) return;
-      console.log("check", nodeID)
       let node = context.getters.getNode(nodeID);
       let checked = null;
       for (let child of context.getters.getNodeChildren(nodeID)) {
