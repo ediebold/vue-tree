@@ -2,13 +2,15 @@ import Vue from 'vue';
 
 export default {
   namespaced: true,
-  state: { 
-    nodes: [],
-    singleCheckOnly: false,
-    separateSelection: true,
-    newIDCount: 0,
-    allowedChildrenCheck: null,
-    states: { default: {}},
+  state () { 
+    return {
+      nodes: [],
+      singleCheckOnly: false,
+      separateSelection: true,
+      newIDCount: 0,
+      allowedChildrenCheck: null,
+      states: { default: {}},
+    }
   },
   mutations: {
     addNodes(state, nodes) {
