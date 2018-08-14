@@ -115,7 +115,6 @@ export default {
         }
       }
       Vue.set(state.states, stateName, newState);
-      console.log(state.states);
     },
     switchState(state, stateName) {
       if(!state.states[stateName]) {
@@ -127,6 +126,9 @@ export default {
       for (let node of state.nodes) {
         node.checked = goalState[node.id] !== undefined ? goalState[node.id] : defaults[node.id];
       }
+    },
+    addState(state, {stateName, stateData}) {
+      Vue.set(state.states, stateName, stateData);
     },
   },
   getters: {
