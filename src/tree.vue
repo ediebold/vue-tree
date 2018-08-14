@@ -132,6 +132,12 @@
                     this.treeEvents.checked(mutation.payload.nodeID, mutation.payload.newValue);
                 } else if (mutation.type === this.namespace + '/selectNode') {
                     this.treeEvents.selected(mutation.payload.nodeID, mutation.payload.newValue);
+                } else if (mutation.type === this.namespace + '/switchState') {
+                    //TODO: not do every single node
+                    let nodes = this.$store.getters[this.namespace + '/getNodes'];
+                    for (let node of nodes) {
+                        this.treeEvents.checked(node.id, node.checked);
+                    }
                 }
             })
         },

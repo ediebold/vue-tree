@@ -161,6 +161,9 @@ export default {
       }
       return sortedChildren;
     },
+    getNodes (state) {
+      return state.nodes;
+    },
     getNode: (state) => (id) => {
       return state.nodes.find(node => node.id == id);
     },
