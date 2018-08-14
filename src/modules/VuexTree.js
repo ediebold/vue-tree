@@ -412,9 +412,11 @@ export default {
       root: true,
       handler (context, stateName) {
         context.commit('switchState', stateName);
+        if (!context.state.states[stateName]) {
+          return;
+        }
         for (let nodeID of Object.keys(context.state.states[stateName])) {
           let node = context.getters.getNode(nodeID);
-          console.log("node!", node.id, node.parent, node.check);
           context.dispatch('checkSelfAndDescendants', {nodeID: node.id, oldValue: node.checked, newValue: context.state.states[stateName][node.id]});
           context.dispatch('updateCheck', node.parent);
         }
