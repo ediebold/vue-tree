@@ -4,7 +4,7 @@
         <h2>Tree View</h2>
         <div>
             <div style="width:840px; margin: 0 auto;">
-                <div style="font-size: 20px; width: 200px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
+                <div style="font-size: 16px; width: 200px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
                     <br />
                     <v-tree :treeEvents="treeEvents" :separateSelection="true" :singleCheck="false" :namespace="namespace" :useImageIcons="false" :allowedChildrenCheck="allowedChildrenCheckTest" />
                     <br />
@@ -46,7 +46,7 @@ export default {
         },
         insertUnsorted: function() {
             let unsorted = [
-                {id: 1, parent: null, previousSibling: null, text: "test", checked: true},
+                {id: 1, parent: null, previousSibling: null, text: "test", checked: true, link: "google.com", icon: "https://cpu-geodjango-media.s3.amazonaws.com/media/myphoto.png"},
                 {id: 2, parent: null, previousSibling: 1, text: "test2", checked: true},
                 {id: 3, parent: 1, previousSibling: null, text: "test child", checked: false},
                 {id: 4, parent: 1, previousSibling: 3, text: "test child 2", checked: true},
@@ -64,10 +64,10 @@ export default {
             return true;
         },
         saveState: function(stateName) {
-            this.$store.commit(this.namespace + "/saveState", stateName);
+            this.$store.dispatch("saveState", stateName);
         },
         loadState: function(stateName) {
-            this.$store.dispatch(this.namespace + "/switchState", stateName);
+            this.$store.dispatch("switchState", stateName);
         },
     },
     computed: {

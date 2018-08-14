@@ -110,11 +110,12 @@ export default {
       let defaults = state.states.default;
       let newState = {};
       for (let node of state.nodes) {
-        if (node.checked != defaults[node.id]) {
+        if (node.checked != defaults[node.id] && node.checked != "indet") {
           newState[node.id] = node.checked;
         }
       }
       Vue.set(state.states, stateName, newState);
+      console.log(state.states);
     },
     switchState(state, stateName) {
       if(!state.states[stateName]) {
@@ -124,7 +125,7 @@ export default {
       let goalState = state.states[stateName];
       let defaults = state.states.default;
       for (let node of state.nodes) {
-        node.checked = goalState[node.id] || defaults[node.id];
+        node.checked = goalState[node.id] !== undefined ? goalState[node.id] : defaults[node.id];
       }
     },
   },
@@ -208,6 +209,7 @@ export default {
         }
         node.text = rawNode.text || "New Node";
         node.icon = rawNode.icon || "";
+        node.link = rawNode.link || null;
         node.parent = rawNode.parent || null;
         if (node.parent && context.state.allowedChildrenCheck != null) {
           let parent =  context.getters.getNode(node.parent) || rawNodes.find(parentNode => parentNode.id === node.parent);
@@ -404,12 +406,23 @@ export default {
     changeAllowedChildrenCheck(context, newValue) {
       context.commit('setAllowedChildrenCheck', newValue);
     },
-    switchState(context, stateName) {
-      context.commit('switchState', stateName);
-      for (let node of Object.keys(context.state.states[stateName])) {
-        context.dispatch('checkSelfAndDescendants', {nodeID: node.id, oldValue: node.checked, newValue: context.state.states[stateName][node.id]});
-        context.dispatch('updateCheck', node.parent);
+    switchState: {
+      root: true,
+      handler (context, stateName) {
+        context.commit('switchState', stateName);
+        for (let nodeID of Object.keys(context.state.states[stateName])) {
+          let node = context.getters.getNode(nodeID);
+          console.log("node!", node.id, node.parent, node.check);
+          context.dispatch('checkSelfAndDescendants', {nodeID: node.id, oldValue: node.checked, newValue: context.state.states[stateName][node.id]});
+          context.dispatch('updateCheck', node.parent);
+        }
       }
-    }
+    },
+    saveState: {
+      root: true,
+      handler (context, stateName) {
+        context.commit('saveState', stateName);
+      }
+    },
   },
 }

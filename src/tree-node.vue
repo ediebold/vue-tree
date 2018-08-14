@@ -13,9 +13,14 @@
         ><input type="checkbox" :checked="data.checked" :indeterminate.prop="data.checked=='indet'" @click.prevent.stop="toggleChecked" :disabled="singleCheck && !isLeaf"
         ><label class="tree-node-label" @click.stop="toggleSelect"
           ><font-awesome-icon v-if="!useImageIcons && data.icon.length > 0" :icon="data.icon" :style="{color: data.iconColor}" class="tree-icon"
-          /><img class="tree-icon" v-else-if="useImageIcons" :src="data.icon"
+          /><img class="tree-icon tree-image" v-else-if="useImageIcons" :src="data.icon"
           /><div :title="data.text" class="tree-text" v-if="!(editing == data.id)">
-            {{ data.text }}
+            <a v-if="data.link" :href="data.link">
+              {{ data.text }}
+            </a>
+            <template v-else>
+              {{ data.text }}
+            </template>
           </div
           ><input type="text" v-else v-model="editedText" v-autowidth="{maxWidth: '80%'}" @blur="endUpdate" @keyup.enter="endUpdate" @click.stop
         /></label>
@@ -287,5 +292,11 @@ export default {
     vertical-align: bottom;
     word-wrap: nowrap;
     text-overflow: ellipsis;
+  }
+
+  .tree-image {
+    vertical-align: bottom;
+    width: 2em;
+    height: 2em;
   }
 </style>
