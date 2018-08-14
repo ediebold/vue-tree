@@ -134,6 +134,9 @@
                     this.treeEvents.selected(mutation.payload.nodeID, mutation.payload.newValue);
                 } else if (mutation.type === this.namespace + '/switchState') {
                     //TODO: not do every single node
+                    if (!this.$store.getters[this.namespace + '/getStates'].includes(mutation.payload)) {
+                        return;
+                    }
                     let nodes = this.$store.getters[this.namespace + '/getNodes'];
                     for (let node of nodes) {
                         this.treeEvents.checked(node.id, node.checked);
