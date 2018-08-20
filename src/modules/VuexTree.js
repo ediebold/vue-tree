@@ -130,6 +130,10 @@ export default {
     addState(state, {stateName, stateData}) {
       Vue.set(state.states, stateName, stateData);
     },
+    clear(state) {
+      state.states = { default: {}};
+      state.nodes = [];
+    }
   },
   getters: {
     getCheckedNodes (state) {
