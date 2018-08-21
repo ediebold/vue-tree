@@ -55,6 +55,9 @@
                 this.draggingNodeID = nodeData.id;
             },
             endDrag: function(e, nodeData) {
+                if (this.treeEvents.dragEnd) {
+                    this.treeEvents.dragEnd(nodeData);
+                }
                 this.draggingNodeID = null;
             },
             getChildren: function(id) {
