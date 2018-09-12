@@ -287,6 +287,9 @@ export default {
   /* Hide the default list bubbles */
   ul.tree, .tree-node ul {
     list-style: none;
+    padding-left: 0;
+  }
+  .tree-node ul > div > .tree-node {
     padding-left: 1em;
   }
   /* Show children on new line */
