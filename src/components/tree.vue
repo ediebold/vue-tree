@@ -3,37 +3,53 @@
         <vue-context ref="vuetreemenu">
             <ul class="options" slot-scope="child">
                 <template v-if="defaultControls">
-                    <li @click="beginAddChildNode(child.data)">Add Child</li>
-                    <li @click="editNodeText(child.data)">Edit Text</li>
-                    <li @click="editNodeIcon($event, child.data)">Edit Icon</li>
+                    <li @click="addChildNode(child.data)">Add Child</li>
+                    <li @click="beginEditText(child.data)">Edit Text</li>
+                    <li @click="beginEditIcon($event, child.data)">Edit Icon</li>
                     <li @click="deleteNode(child.data)">Delete</li>
                     <li v-for="control in treeEvents.contextOptions" @click="control.func(child.data)">{{control.label}}</li>
                 </template>
-
             </ul>
         </vue-context>
-        <floating-icon-picker v-if="!useImageIcons" ref="floatingiconpicker" @selectIcon="endEditIcon"></floating-icon-picker>
-        <ul class="tree"> 
-            <TreeNode v-for="node in rootNodes" :key="node.id" :data="node" :updateCheck="updateCheck" :updateSelect="updateSelect" :getChildren="getChildren" :singleCheck="singleCheck"
-            :dragging="dragging" :editing="editing" :editingIcon="editingIcon" :reselectDescendants="reselectDescendants" :endEditText="endEditText" :beginDrag="beginDrag" :endDrag="endDrag" :registerDrop="registerDrop" :registerDropAfter="registerDropAfter" :context="openContextMenu"
-            :useImageIcons="useImageIcons" />
-        </ul>
-        <button class="newNodeButton" @click="makeRootNode">New Root Node</button>
+        <floating-icon-picker 
+        v-if="!useImageIcons" 
+        ref="floatingiconpicker" 
+        @selectIcon="endEditIcon" />
+        <div class="tree">
+            <TreeNode 
+            :data="{id: null}"
+            :singleCheck="singleCheck"
+            :getChildren="getChildren"
+            :treeEventBus="treeEventBus"
+            :checkboxComponent="checkboxComponent"
+            :iconComponent="iconComponent"
+            :editingText="editingText"
+            :dragGroup="dragGroup" />
+        </div>
+        <slot name="footer">
+            <button class="newNodeButton" @click="makeRootNode">New Root Node</button>
+        </slot>
     </div>
 </template>
 <script>
+    import Vue from 'vue'
     import TreeNode from './tree-node.vue'
     import {VueContext} from 'vue-context'
     import FloatingIconPicker from './floating-icon-picker.vue';
+    import draggable from 'vuedraggable'
+
+
+    import BasicIcon from './basic-icon.vue'
+    import BasicCheckbox from './basic-checkbox.vue'
 
     export default {
         name: 'VTree',
         data: function() {
             return {
-                draggingNodeID: null,
-                editing: null,
+                editingText: null,
                 editingIcon: null,
                 defaultControls: true,
+                treeEventBus: new Vue(),
             }
         },
         props: {
@@ -43,50 +59,56 @@
             singleCheck: {type: Boolean, required: false, default: false},
             useImageIcons: {type: Boolean, required: false, default: false},
             allowedChildrenCheck: {type: Function, required: false, default: null},
+            checkboxComponent: {type: Object, required: false, default: () => BasicCheckbox},
+            iconComponent: {type: Object, required: false, default: () => BasicIcon},
+            dragGroup: {type: String, required: false, default: "vuex-tree"},
         },
         methods: {
-            updateCheck: function(id, newValue) {
-                this.$store.dispatch(this.namespace + '/checkNode', {nodeID: id, newValue})
-            },
-            updateSelect: function(id, newValue) {
-                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: id, newValue})
-            },
-            beginDrag: function(e, nodeData) {
-                this.draggingNodeID = nodeData.id;
-            },
-            endDrag: function(e, nodeData) {
-                if (this.treeEvents.dragEnd) {
-                    this.treeEvents.dragEnd(nodeData);
-                }
-                this.draggingNodeID = null;
-            },
+            // Function passed down to nodes
             getChildren: function(id) {
                 return this.$store.getters[this.namespace + '/getNodeChildren'](id);
             },
-            registerDrop: function(e, nodeData) {
-                this.$store.dispatch(this.namespace + '/makeChild', {nodeID: this.draggingNodeID, newParentID: nodeData.id});
+            //Event bus functions
+            updateCheck: function(data) {
+                this.$store.dispatch(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value})
             },
-            registerDropAfter: function(e, nodeData) {
-                this.$store.dispatch(this.namespace + '/moveAfter', {nodeID: this.draggingNodeID, newPreviousID: nodeData.id});
+            updateSelect: function(data) {
+                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
             },
-            openContextMenu: function(e, id) {
-                this.contextEvent = e.currentTarget;
-                this.$refs.vuetreemenu.open(e, id);
+            openContextMenu: function(data) {
+                this.contextEvent = data.event.currentTarget;
+                this.$refs.vuetreemenu.open(data.event, data.id);
             },
-            beginAddChildNode: function(id) {
-                this.$store.dispatch(this.namespace + '/addNode', {parent: id})
+            reselectDescendants: function(data) {
+                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
             },
-            editNodeText: function(id) {
-                this.editing = id;
+            registerDropUnder: function(data) {
+                let nodeID = data.event.item.attributes["data-node-id"].value
+                let newParentID = null;
+                if (data.event.to.attributes["data-node-id"]) {
+                    newParentID = data.event.to.attributes["data-node-id"].value;
+                }
+                let newSiblings = this.getChildren(newParentID);
+                let newPreviousID = null;
+                if (data.event.newIndex > 0) {
+                    if (data.event.from == data.event.to && data.event.newIndex > data.event.oldIndex) {
+                        newPreviousID = newSiblings[data.event.newIndex].id;
+                    } else {
+                        newPreviousID = newSiblings[data.event.newIndex - 1].id;
+                    }
+                }
+                console.log(nodeID, newPreviousID, newParentID)
+                this.$store.dispatch(this.namespace + '/makeChild', {nodeID: nodeID, newParentID: newParentID, newPreviousID: newPreviousID});
             },
-            endEditText: function(nodeID, newText) {
-                this.editing = null;
-                this.$store.commit(this.namespace + '/editText', {nodeID, newValue: newText})
+            //Editing
+            beginEditText: function(id) {
+                this.editingText = id;
             },
-            reselectDescendants: function(nodeID, newValue) {
-                this.$store.dispatch(this.namespace + '/selectNode', {nodeID, newValue})
+            endEditText: function(data) {
+                this.editingText = null;
+                this.$store.commit(this.namespace + '/editText', {nodeID: data.id, newValue: data.newText})
             },
-            editNodeIcon: function(e, id) {
+            beginEditIcon: function(e, id) {
                 this.editingIcon = id;
                 this.$refs.floatingiconpicker.open(this.contextEvent);
             },
@@ -94,19 +116,15 @@
                 this.$store.commit(this.namespace + '/editIcon', {nodeID: this.editingIcon, newValue: newIcon})
                 this.editingIcon = null;
             },
-            makeRootNode: function() {
-                this.$store.dispatch(this.namespace + '/addNode', {})
+            // Tree manipulation
+            addChildNode: function(id) {
+                this.$store.dispatch(this.namespace + '/addNode', {parent: id})
             },
             deleteNode: function(id) {
                 this.$store.dispatch(this.namespace + '/deleteNode', id)
             },
-        },
-        computed: {
-            rootNodes: function() {
-                return this.$store.getters[this.namespace + '/getNodeChildren'](null);
-            },
-            dragging: function() {
-                return this.$store.getters[this.namespace + '/getNode'](this.draggingNodeID);
+            makeRootNode: function() {
+                this.$store.dispatch(this.namespace + '/addNode', {})
             },
         },
         watch: {
@@ -130,6 +148,16 @@
             if (this.allowedChildrenCheck) {
                 this.$store.dispatch(this.namespace + '/changeAllowedChildrenCheck', this.allowedChildrenCheck);
             }
+
+            //Create event bus hooks
+            this.treeEventBus.$on("context", this.openContextMenu);
+            this.treeEventBus.$on("endTextUpdate", this.endEditText);
+            this.treeEventBus.$on("updateCheck", this.updateCheck);
+            this.treeEventBus.$on("updateSelect", this.updateSelect);
+            this.treeEventBus.$on("reselectDescendants", this.reselectDescendants);
+            this.treeEventBus.$on("registerDropUnder", this.registerDropUnder);
+
+
             this.$store.subscribe(mutation => {
                 if (mutation.type === this.namespace + '/checkNode') {
                     this.treeEvents.checked(mutation.payload.nodeID, mutation.payload.newValue);
@@ -151,6 +179,7 @@
             TreeNode,
             VueContext,
             'floating-icon-picker': FloatingIconPicker,
+            draggable,
         }
     }
 </script>

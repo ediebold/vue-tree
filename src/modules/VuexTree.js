@@ -347,23 +347,41 @@ export default {
         context.dispatch('updateSelect', node.parent);
       }
     },
-    makeChild(context, {nodeID, newParentID}) {
+    makeChild(context, {nodeID, newParentID, newPreviousID}) {
       let node = context.getters.getNode(nodeID);
       let newParent = context.getters.getNode(newParentID);
+      let newSiblings = context.getters.getNodeChildren(newParentID);
       // Check if we can just skip doing anything
       if (nodeID == newParentID) return;
-      if (node.parent == newParentID) return;
-      // Get last child as the new previousSibling
-      let newPreviousID = null;
-      let newSiblings = context.getters.getNodeChildren(newParentID);
-      if (newSiblings.length > 0) {
-        newPreviousID = newSiblings[newSiblings.length - 1].id
+      // Get last child as the new previousSibling if not selected
+      if (newPreviousID === undefined) {
+        if (newSiblings.length > 0) {
+          newPreviousID = newSiblings[newSiblings.length - 1].id
+        } else {
+          newPreviousID = null;
+        }
+      }
+      if (newParentID == node.parent && newPreviousID == node.previousSibling) return;
+      // Make sure to update the new next sibling
+      let newNextID = null;
+      let newNext;
+      if (newPreviousID != null) {
+        newNext = context.getters.getNextSiblingNode(newPreviousID);
+        if (newNext) {
+          newNextID = newNext.id;
+        }
+      } else {
+        if (newSiblings.length > 0) {
+          newNextID = newSiblings.find(node => node.previousSibling == null).id;
+        } else {
+          newNextID = null;
+        }
       }
       // Get the oldNext node to update it's references
       let oldNext = context.getters.getNextSiblingNode(nodeID);
       let oldNextID = oldNext ? oldNext.id : null;
-
-      context.commit('moveNode', {nodeID, newParentID, newPreviousID, newNextID: null, oldNextID})
+      console.log(nodeID, newParentID, newPreviousID, newNextID, oldNextID)
+      context.commit('moveNode', {nodeID, newParentID, newPreviousID, newNextID, oldNextID})
       // Update parent status
       if (node.parent != null) {
         context.dispatch('updateCheck', node.parent);

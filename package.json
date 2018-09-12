@@ -32,6 +32,8 @@
     "font-awesome-picker": "^2.0.0",
     "vue-context": "^3.1.1",
     "vue-input-autowidth": "^1.0.2",
+    "vue2-hammer": "^2.0.1",
+    "vuedraggable": "^2.16.0",
     "vuex": "^3.0.1"
   }
 }
