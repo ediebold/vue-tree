@@ -239,7 +239,6 @@ export default {
           border-top: 1px solid #000
           top: 0.5em
           width: 0.5em
-          height: 0
 
         &::after
           border-left: 1px solid #000
@@ -251,7 +250,7 @@ export default {
           height: 0.5em
         
         .empty-expand-icon
-          border-top: 1px solid #000
-          margin-top: 0.5em
+          align-self: stretch
+          border-bottom: 1px solid #000
           height: 0.5em
 </style>
