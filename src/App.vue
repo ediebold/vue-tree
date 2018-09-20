@@ -4,9 +4,9 @@
         <h2>Tree View</h2>
         <div>
             <div style="width:440px; margin: 0 auto;">
-                <div style="font-size: 24px; width: 300px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
+                <div style="font-size: 30px; width: 300px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
                     <br />
-                    <v-tree :treeEvents="treeEvents" :separateSelection="true" :singleCheck="false" :namespace="namespace" :useImageIcons="false" :allowedChildrenCheck="allowedChildrenCheckTest" />
+                    <v-tree :treeEvents="treeEvents" :separateSelection="true" :singleCheck="false" :namespace="namespace" :iconComponent="iconType" :iconPickComponent="false" :allowedChildrenCheck="allowedChildrenCheckTest"  />
                     <br />
                 </div>
                 <button style="clear: both; display: block;" @click="insertUnsorted">Test Unsorted Insert</button>
@@ -20,6 +20,9 @@
 </template>
 
 <script>
+
+import ImageIcon from './components/image-icon.vue'
+
 export default {
     name: 'app',
     data () {
@@ -38,6 +41,7 @@ export default {
                 ],
             },
             newStateName: "",
+            iconType: ImageIcon
         }
     },
     methods: {
@@ -46,9 +50,9 @@ export default {
         },
         insertUnsorted: function() {
             let unsorted = [
-                {id: 1, parent: null, previousSibling: null, text: "test", checked: true, link: "google.com", icon: "https://cpu-geodjango-media.s3.amazonaws.com/media/myphoto.png"},
+                {id: 1, parent: null, previousSibling: null, text: "test", checked: true, link: "http://google.com", icon: "https://cpu-geodjango-media.s3.amazonaws.com/media/myphoto.png"},
                 {id: 2, parent: null, previousSibling: 1, text: "test2", checked: true},
-                {id: 3, parent: 1, previousSibling: null, text: "test child", checked: false},
+                {id: 3, parent: 1, previousSibling: null, text: "test child", checked: false, icon: 'http://oxydy.com/wp-content/uploads/2018/02/test-img-300x194.png'},
                 {id: 4, parent: 1, previousSibling: 3, text: "test child 2", checked: true},
                 {id: 6, parent: 3, previousSibling: null, text: "test feature", checked: true},
                 {id: 7, parent: 3, previousSibling: 6, text: "test feature 2", checked: true},

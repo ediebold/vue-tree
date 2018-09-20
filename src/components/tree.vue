@@ -5,16 +5,18 @@
                 <template v-if="defaultControls">
                     <li @click="addChildNode(child.data)">Add Child</li>
                     <li @click="beginEditText(child.data)">Edit Text</li>
-                    <li @click="beginEditIcon($event, child.data)">Edit Icon</li>
+                    <li @click="beginEditIcon($event, child.data)" v-if="iconPickComponent">Edit Icon</li>
                     <li @click="deleteNode(child.data)">Delete</li>
-                    <li v-for="control in treeEvents.contextOptions" @click="control.func(child.data)">{{control.label}}</li>
                 </template>
+                <li v-for="control in treeEvents.contextOptions" @click="control.func(child.data)">{{control.label}}</li>
             </ul>
         </vue-context>
-        <floating-icon-picker 
-        v-if="!useImageIcons" 
-        ref="floatingiconpicker" 
-        @selectIcon="endEditIcon" />
+        <template v-if="iconPickComponent">
+            <component
+            :is="iconPickComponent"
+            ref="iconPicker" 
+            @selectIcon="endEditIcon" />
+        </template>
         <div class="tree">
             <TreeNode 
             :data="{id: null}"
@@ -57,10 +59,10 @@
             treeEvents: {type: Object, required: false, default: {}},
             separateSelection: {type: Boolean, required: false, default: true},
             singleCheck: {type: Boolean, required: false, default: false},
-            useImageIcons: {type: Boolean, required: false, default: false},
             allowedChildrenCheck: {type: Function, required: false, default: null},
             checkboxComponent: {type: Object, required: false, default: () => BasicCheckbox},
             iconComponent: {type: Object, required: false, default: () => BasicIcon},
+            iconPickComponent: {type: Object, required: false, default: () => FloatingIconPicker},
             dragGroup: {type: String, required: false, default: "vuex-tree"},
         },
         methods: {
@@ -109,7 +111,7 @@
             },
             beginEditIcon: function(e, id) {
                 this.editingIcon = id;
-                this.$refs.floatingiconpicker.open(this.contextEvent);
+                this.$refs.iconPicker.open(this.contextEvent);
             },
             endEditIcon: function(newIcon) {
                 this.$store.commit(this.namespace + '/editIcon', {nodeID: this.editingIcon, newValue: newIcon})

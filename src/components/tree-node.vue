@@ -32,6 +32,7 @@
         class="tree-text"
         :title="data.text">
           <a 
+          target="_blank"
           v-if="data.link" 
           :href="data.link" >
             {{ data.text }}
@@ -53,11 +54,10 @@
       </label>
     </template>
     <ul 
-    v-if="(expanded && !isLeaf) || (isLeaf && fakeExpand)">
+    v-if="(expanded && !isLeaf)">
       <draggable 
       :value="children"
       @end="registerDropUnder"
-      :move="visualiseChild2"
       :options="{
         group: dragGroup,
         animation: 70,
@@ -126,7 +126,6 @@ export default {
       }
     },
     registerDropUnder: function(event) {
-      this.treeEventBus.$emit("DragEnd");
       this.treeEventBus.$emit('registerDropUnder', {id: this.data.id, event: event});
     },
   },
@@ -182,9 +181,6 @@ export default {
   components: {
     draggable,
   },
-  created: function() {
-    this.treeEventBus.$on("DragEnd", this.closeFakeExpand);
-  }
 }
 </script>
 <style lang="stylus">
@@ -193,17 +189,27 @@ export default {
     flex-direction: row
     flex-wrap: wrap
     align-items: center
-    
+
     &.selected
       background-color: #999
 
     .tree-node-label
       flex: 1
       min-width: 0
+      display: flex
+      flex-direction: row
+      flex-wrap: wrap
+      align-items: center
       cursor: default
+      height: 1em
       padding: 0 2px 0 2px
+
+      .tree-text, .tree-icon
+        display: inline-block
     
       .tree-text
+        flex: 1
+        min-width: 0
         max-width: 100%
         overflow: hidden
         text-overflow: ellipsis

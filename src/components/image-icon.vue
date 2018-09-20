@@ -1,5 +1,7 @@
 <template>
     <img 
+    v-if="icon"
+    class="tree-basic-image"
     type="checkbox" 
     :src="icon" />
 </template>
@@ -15,4 +17,8 @@
 </script>
 
 <style>
+    img.tree-basic-image {
+        width: 1em;
+        height: 1em;
+    }
 </style>

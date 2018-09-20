@@ -1,6 +1,7 @@
 <template>
     <input 
-    type="checkbox" 
+    type="checkbox"
+    class="tree-basic-checkbox"
     :checked="check" 
     :indeterminate.prop="check =='indet'" 
     :disabled="disabled" />
@@ -17,7 +18,7 @@
 </script>
 
 <style >
-    input {
-        font-size: inherit;
+    input.tree-basic-checkbox {
+        font-size:inherit;
     }
 </style>
