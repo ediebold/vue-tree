@@ -97,7 +97,6 @@
                         newPreviousID = newSiblings[data.event.newIndex - 1].id;
                     }
                 }
-                console.log(nodeID, newPreviousID, newParentID)
                 this.$store.dispatch(this.namespace + '/makeChild', {nodeID: nodeID, newParentID: newParentID, newPreviousID: newPreviousID});
             },
             //Editing
@@ -184,30 +183,22 @@
     }
 </script>
 
-<style>
-    .v-context {
-        width: 100px !important;
-    }
+<style lang="stylus">
+    .v-context
+        width: 6.5em !important
 
-    .v-context ul, .v-context li {
-        padding: 0 !important;
-    }
+        ul, li
+            padding: 0 !important
+        ul
+            font-size: inherit !important
+            font-weight: normal !important
+        li
+            border-bottom: 1px #CCC solid !important
 
-    .v-context ul {
-        font-size: inherit !important;
-        font-weight: normal !important;
-    }
+    .tree
+        margin-bottom: 0.1em
+        white-space: nowrap
 
-    .v-context li {
-        border-bottom: 1px #CCC solid !important;
-    }
-
-    .tree {
-        margin-bottom: 0.1em;
-        white-space: nowrap;
-    }
-
-    .newNodeButton {
-        margin-left: 1.5em;
-    }
+    .newNodeButton
+        margin-left: 1.5em
 </style>

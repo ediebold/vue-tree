@@ -16,5 +16,8 @@
     }
 </script>
 
-<style>
+<style >
+    input {
+        font-size: inherit;
+    }
 </style>

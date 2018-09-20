@@ -38,7 +38,15 @@ module.exports = {
         }, {
           loader: "css-loader" // translates CSS into CommonJS
         }]
-      },      
+      },
+      {
+        test: /\.styl(us)?$/,
+        use: [
+          'vue-style-loader',
+          'css-loader',
+          'stylus-loader'
+        ]
+      }, 
       {
         test: /\.(png|jpg|gif|svg|woff|woff2|eot|ttf)$/,
         loader: 'file-loader',

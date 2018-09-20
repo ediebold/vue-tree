@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <li 
   :class="classes"
   :data-node-id="data.id">
     <template
@@ -7,13 +7,8 @@
       <font-awesome-icon 
       :icon="expandIcon || 'circle'" 
       fixed-width 
-      class="expand-icon"
-      :style="expandIconColor"
-      @click="toggleExpand"
-      :id="'tree-icon-' + data.id"
-      @dragover.stop.prevent="visualiseChild"
-      @dragleave.stop.prevent="visualiseChild3"
-      @dragexit.stop.prevent="visualiseChild3" />
+      :class="expandIconClasses"
+      @click="toggleExpand" />
 
       <component 
       :is="checkboxComponent"
@@ -43,7 +38,7 @@
           </a>
           <template 
           v-else>
-            {{ data.text }} {{ data.id}}
+            {{ data.text }}
           </template>
         </div>
 
@@ -65,10 +60,9 @@
       :move="visualiseChild2"
       :options="{
         group: dragGroup,
-        animation: 250,
+        animation: 70,
       }"
-      :data-node-id="data.id"
-      :style="{'min-height': '1em', 'background-color': 'rgba(255,0,0,0.2)'}" >
+      :data-node-id="data.id" >
         <TreeNode 
         v-for="node in children" 
         :key="node.id" 
@@ -82,7 +76,7 @@
         :dragGroup="dragGroup" />
       </draggable>
     </ul>
-  </div>
+  </li>
 </template>
 
 <script>
@@ -94,13 +88,6 @@ export default {
     return {
       editedText: "",
       expanded: this.data.id === null,
-      dragMoveHoverStartTime: 0,
-      dragMoveHoverIndex: -1,
-      dragMoveHoverTime: 0,
-      dragMoveExpandStartTime: 0,
-      dragMoveExpandIndex: -1,
-      dragMoveExpandTime: 250,
-      fakeExpand: false,
     }
   },
   props: {
@@ -142,56 +129,6 @@ export default {
       this.treeEventBus.$emit("DragEnd");
       this.treeEventBus.$emit('registerDropUnder', {id: this.data.id, event: event});
     },
-    visualiseChild: function(event) {
-      //if (!event.srcElement.id.startsWith("tree-icon-")) return;
-      if (event.srcElement.id == "tree-icon-" + this.data.id) return;
-      console.log("event", event.srcElement.id, "tree-icon-" + this.data.id, event.relatedTarget)
-      if (event.srcElement.id == this.dragMoveExpandIndex) {
-        if (Date.now() - this.dragMoveExpandStartTime < this.dragMoveExpandTime) {
-          //Hovering, but long enough. Do nothing.
-          return false;
-        } else {
-          // Expand!
-          this.dragMoveExpandIndex = -1;
-          this.dragMoveExpandStartTime = 0;
-          // Expand if not expanded
-          if (!this.isLeaf && !this.expanded) {
-            this.toggleExpand();
-          // Fake expand if leaf
-          } else if (this.isLeaf) {
-            this.fakeExpand = true;
-          }
-        }
-      } else {
-        // Reset timer
-        this.dragMoveExpandStartTime = Date.now();
-        this.dragMoveExpandIndex = event.srcElement.id;
-        return false;
-      }
-      return false;
-    },
-    visualiseChild3: function(event) {
-      //this.fakeExpand = false;
-    },
-    visualiseChild2: function(event) {
-      if (event.relatedContext.index == this.dragMoveHoverIndex) {
-        if (Date.now() - this.dragMoveHoverStartTime < this.dragMoveHoverTime) {
-          return false;
-        } else {
-          this.dragMoveHoverIndex = -1;
-          this.dragMoveHoverStartTime = 0;
-          return true;
-        }
-      } else {
-        this.dragMoveHoverStartTime = Date.now();
-        this.dragMoveHoverIndex = event.relatedContext.index;
-        return false;
-      }
-      return false;
-    },
-    closeFakeExpand: function() {
-      this.fakeExpand = false;
-    }
   },
   computed: {
     classes: function() {
@@ -201,6 +138,13 @@ export default {
         "expanded" : this.expanded,
         "leaf" : this.isLeaf,
         "root" : this.isRoot,
+      }
+    },
+    expandIconClasses: function() {
+      return {
+        "tree-icon" : true,
+        "expand-icon" : true,
+        "empty-expand-icon" : !this.expandIcon,
       }
     },
     isRoot: function() {
@@ -216,13 +160,6 @@ export default {
         return "minus-circle";
       } else {
         return "plus-circle";
-      }
-    },
-    expandIconColor: function() {
-      if (!this.expandIcon) {
-        return { color: 'rgba(1,1,1,1)' };
-      } else {
-        return {};
       }
     },
     iconColor: function() {
@@ -250,138 +187,65 @@ export default {
   }
 }
 </script>
-<style>
-  .tree-node > *, .tree-node-label > *, .node-drag-target > * {
-    display: inline-block;
-  }
-  .tree-node.selected > .node-drag-target {
-    background-color: #999;
-  }
+<style lang="stylus">
+  .tree-node
+    display: flex
+    flex-direction: row
+    flex-wrap: wrap
+    align-items: center
+    
+    &.selected
+      background-color: #999
 
-  .tree-node.highlighted > .node-drag-target {
-    background-color: #CCC;
-  }
+    .tree-node-label
+      flex: 1
+      min-width: 0
+      cursor: default
+      padding: 0 2px 0 2px
+    
+      .tree-text
+        max-width: 100%
+        overflow: hidden
+        text-overflow: ellipsis
+        height: 1em
 
-  .tree-node.dragged > .node-drag-target {
-    /*display: none;*/
-    background-color: #AAA;
-  }
+    .expand-icon
+      width: 1em
 
-  .node-drag-target {
-    width: 100%;
-  }
+    .empty-expand-icon
+      color: rgba(0,0,0,0)
+    
+    ul
+      padding-left: 0
+      flex-basis: 100%
 
-  .expand-icon {
-    width: 1em;
-  }
+    .tree-node>ul
+      &>div>.tree-node
+        padding-left: 1em
+        position: relative
 
-  .tree-icon {
-    vertical-align: top;
-    padding: 0 2px 0 2px;
-    width: 1em;
-  }
-  .tree-node-label {
-    cursor: default;
-    padding: 0 2px 0 2px;
-  }
-  /* Hide the default list bubbles */
-  ul.tree, .tree-node ul {
-    list-style: none;
-    padding-left: 0;
-  }
-  .tree-node ul > div > .tree-node {
-    padding-left: 1em;
-  }
-  /* Show children on new line */
-  .tree ul { 
-    display: block; 
-  }
-  .tree input.expandedCheckbox {
-    position: absolute;
-    margin: 0.2em 0 0 -1em;
-    visibility: hidden;
-  }
-  .tree div.expander {
-    position: relative;
-    float: left;
-    text-align: center;
-    padding-top: 2px;
-    line-height: .8em;
-  }
+        &::before, &::after
+          content: ""
+          position: absolute
+          left: 0.5em
 
-  ul.tree li {
-    position: relative;
-  }
+        &::before
+          border-top: 1px solid #000
+          top: 0.5em
+          width: 0.5em
+          height: 0
 
-  .tree-node li::before, .tree-node li::after {
-      content: "";
-      position: absolute;
-      left: -0.55em;
-  }
+        &::after
+          border-left: 1px solid #000
+          height: 100%
+          width: 0
+          top: 0
 
-  .tree-node li::before {
-      border-top: 1px solid #000;
-      top: 0.6em;
-      width: 0.75em;
-      height: 0;
-  }
-
-  .tree-node li::after {
-      border-left: 1px solid #000;
-      height: 100%;
-      width: 0;
-      top: 0;
-  }
-
-  .tree-node ul > li:last-child::after {
-      height: 0.6em;
-  }
-
-  .tree-node.leaf.root .no-icon {
-      border-bottom: 0;
-  }
-
-  .no-icon {
-    width: 1em;
-    border-bottom: 1px solid #000;
-    height: 0.5em;
-    margin-left: 0px;
-  }
-
-  .dropAfterTarget {
-    display: block;
-    bottom: 0;
-    left: 0;
-    height: 0.4em;
-    width: 100%;
-    background-color: #999;
-  }
-
-  .dropAfterTargetHover {
-    height: 1em;
-    background-color: #999;
-  }
-
-  .node-drag-target {
-    overflow: hidden;
-    vertical-align: bottom;
-  }
-
-  .tree-node-label {
-    width: 80%;
-  }
-
-  .tree-text {
-    width: 80%;
-    overflow: hidden;
-    vertical-align: bottom;
-    word-wrap: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .tree-image {
-    vertical-align: bottom;
-    width: 2em;
-    height: 2em;
-  }
+        &:last-child::after
+          height: 0.5em
+        
+        .empty-expand-icon
+          border-top: 1px solid #000
+          margin-top: 0.5em
+          height: 0.5em
 </style>
