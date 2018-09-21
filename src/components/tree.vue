@@ -62,7 +62,7 @@
             allowedChildrenCheck: {type: Function, required: false, default: null},
             checkboxComponent: {type: Object, required: false, default: () => BasicCheckbox},
             iconComponent: {type: Object, required: false, default: () => BasicIcon},
-            iconPickComponent: {type: Object, required: false, default: () => FloatingIconPicker},
+            iconPickComponent: {type: [Boolean, Object], required: false, default: () => FloatingIconPicker},
             dragGroup: {type: String, required: false, default: "vuex-tree"},
         },
         methods: {
@@ -72,17 +72,17 @@
             },
             //Event bus functions
             updateCheck: function(data) {
-                this.$store.dispatch(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value})
+                this.$store.commit(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value})
             },
             updateSelect: function(data) {
-                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
+                this.$store.commit(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
             },
             openContextMenu: function(data) {
                 this.contextEvent = data.event.currentTarget;
                 this.$refs.vuetreemenu.open(data.event, data.id);
             },
             reselectDescendants: function(data) {
-                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
+                this.$store.commit(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
             },
             registerDropUnder: function(data) {
                 let nodeID = data.event.item.attributes["data-node-id"].value
@@ -99,7 +99,7 @@
                         newPreviousID = newSiblings[data.event.newIndex - 1].id;
                     }
                 }
-                this.$store.dispatch(this.namespace + '/makeChild', {nodeID: nodeID, newParentID: newParentID, newPreviousID: newPreviousID});
+                this.$store.commit(this.namespace + '/moveNode', {nodeID: nodeID, newParentID: newParentID, newPreviousID: newPreviousID});
             },
             //Editing
             beginEditText: function(id) {
@@ -119,35 +119,35 @@
             },
             // Tree manipulation
             addChildNode: function(id) {
-                this.$store.dispatch(this.namespace + '/addNode', {parent: id})
+                this.$store.commit(this.namespace + '/addNodes', [{parent: id}])
             },
             deleteNode: function(id) {
-                this.$store.dispatch(this.namespace + '/deleteNode', id)
+                this.$store.commit(this.namespace + '/deleteNode', {nodeID: id})
             },
             makeRootNode: function() {
-                this.$store.dispatch(this.namespace + '/addNode', {})
+                this.$store.commit(this.namespace + '/addNodes', [{}])
             },
         },
         watch: {
             singleCheck: function(newValue, oldvalue) {
-                this.$store.dispatch(this.namespace + '/changeSingleCheck', newValue);
+                this.$store.commit(this.namespace + '/setSingleCheckOnly', newValue);
             },
             separateSelection: function(newValue, oldvalue) {
-                this.$store.dispatch(this.namespace + '/changeSeparateSelection', newValue);
+                this.$store.commit(this.namespace + '/setSeparateSelection', newValue);
             },
             allowedChildrenCheck: function(newValue, oldvalue) {
-                this.$store.dispatch(this.namespace + '/changeAllowedChildrenCheck', newValue);
+                this.$store.commit(this.namespace + '/setAllowedChildrenCheck', newValue);
             },
         },
         created: function() {
             if (this.singleCheck) {
-                this.$store.dispatch(this.namespace + '/changeSingleCheck', true);
+                this.$store.commit(this.namespace + '/setSingleCheckOnly', true);
             }
             if (!this.separateSelection) {
-                this.$store.dispatch(this.namespace + '/changeSeparateSelection', false);
+                this.$store.commit(this.namespace + '/setSeparateSelection', false);
             }
             if (this.allowedChildrenCheck) {
-                this.$store.dispatch(this.namespace + '/changeAllowedChildrenCheck', this.allowedChildrenCheck);
+                this.$store.commit(this.namespace + '/setAllowedChildrenCheck', this.allowedChildrenCheck);
             }
 
             //Create event bus hooks
@@ -165,13 +165,8 @@
                 } else if (mutation.type === this.namespace + '/selectNode') {
                     this.treeEvents.selected(mutation.payload.nodeID, mutation.payload.newValue);
                 } else if (mutation.type === this.namespace + '/switchState') {
-                    //TODO: not do every single node
-                    if (!this.$store.getters[this.namespace + '/getStates'].includes(mutation.payload)) {
-                        return;
-                    }
-                    let nodes = this.$store.getters[this.namespace + '/getNodes'];
-                    for (let node of nodes) {
-                        this.treeEvents.checked(node.id, node.checked);
+                    for (rootNode of this.$store.getters[this.namespace + '/getRootNodes']) {
+                        this.treeEvents.checked(rootNode.id, node.checked);
                     }
                 }
             })

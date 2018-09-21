@@ -13,7 +13,7 @@
       <component 
       :is="checkboxComponent"
       :check="data.checked" 
-      @click.prevent.stop="toggleChecked" 
+      @click.native.prevent.stop="toggleChecked" 
       :disabled="singleCheck && !isLeaf" />
       
       <label 
