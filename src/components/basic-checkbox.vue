@@ -2,7 +2,7 @@
     <input 
     type="checkbox"
     class="tree-basic-checkbox"
-    :checked="check" 
+    :checked="check"
     :indeterminate.prop="check =='indet'" 
     :disabled="disabled" />
 </template>

@@ -120,7 +120,7 @@ export default {
         // Set up parent's reference to node
         let parentID = node.parent == null ? "__root" : node.parent;
         // Error if the parent doesn't exist
-        if (parentID != "__root" && !oldNodeIDs.includes(parentID) && !newNodeIDs.includes(parentID)) {
+        if (parentID != "__root" && !oldNodeIDs.includes(parentID.toString()) && !newNodeIDs.includes(parentID)) {
           console.error("Tree Error. " + node.id + " has " + parentID + " as a parent, but that node does not exist.");
           errors = true;
         }

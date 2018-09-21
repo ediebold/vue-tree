@@ -12,6 +12,7 @@
 
       <component 
       :is="checkboxComponent"
+      ref="checkbox"
       :check="data.checked" 
       @click.native.prevent.stop="toggleChecked" 
       :disabled="singleCheck && !isLeaf" />
@@ -123,6 +124,11 @@ export default {
       this.expanded = !this.expanded;
       if (!this.expanded && !this.data.selected) {
         this.treeEventBus.$emit('reselectDescendants', {id: this.data.id, value: false});
+      }
+      // Dirty hack to get around a bug in Vue where checkboxes would appear checked
+      // even though the props were false.
+      if (this.expanded) {
+        this.$refs.checkbox.$forceUpdate();
       }
     },
     registerDropUnder: function(event) {
