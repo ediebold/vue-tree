@@ -72,6 +72,11 @@
             },
             //Event bus functions
             updateCheck: function(data) {
+                // Dirty hack to get around a bug in Vue where checkboxes would appear checked
+                // even though the props were false.
+                this.$nextTick(() => {
+                    this.$forceUpdate();
+                });
                 this.$store.commit(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value})
             },
             updateSelect: function(data) {
