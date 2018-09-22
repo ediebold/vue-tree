@@ -72,6 +72,7 @@
             },
             //Event bus functions
             updateCheck: function(data) {
+                console.log("made it to tree event")
                 this.$store.commit(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value})
             },
             updateSelect: function(data) {
@@ -161,7 +162,10 @@
 
             this.$store.subscribe(mutation => {
                 if (mutation.type === this.namespace + '/checkNode') {
+                    console.log("made it to treeevent call");
                     this.treeEvents.checked(mutation.payload.nodeID, mutation.payload.newValue);
+                } else if (mutation.type === this.namespace + '/moveNode') {
+                    this.treeEvents.moveNode(mutation.payload);
                 } else if (mutation.type === this.namespace + '/selectNode') {
                     this.treeEvents.selected(mutation.payload.nodeID, mutation.payload.newValue);
                 } else if (mutation.type === this.namespace + '/switchState') {
@@ -196,6 +200,9 @@
         margin-bottom: 0.1em
         white-space: nowrap
         line-height: 1
+
+        li 
+            list-style: none
 
     .newNodeButton
         margin-left: 1.5em

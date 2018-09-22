@@ -115,6 +115,7 @@ export default {
       this.treeEventBus.$emit('endTextUpdate', {id: this.data.id, newText: this.editedText});
     },
     toggleChecked: function() {
+      console.log("made it to tree-node click event")
       this.treeEventBus.$emit('updateCheck', {id: this.data.id, value: !this.data.checked});
     },
     toggleSelect: function() {

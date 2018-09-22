@@ -85,7 +85,7 @@ export default {
         newNodeIDs.push(node.id);
         newIDCount++;
 
-        node.text = rawNode.text || "New Node " + node.id;
+        node.text = rawNode.text || "New Node ";
         node.icon = rawNode.icon || "";
         node.link = rawNode.link || null;
         node.parent = rawNode.parent || null;
@@ -215,6 +215,7 @@ export default {
       }
     },
     checkNode(state, {nodeID, newValue}) {
+      console.log("made it to vuex")
       let node;
       // Deal with single check trees
       if (state.singleCheckOnly) {
