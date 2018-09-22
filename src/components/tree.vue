@@ -195,6 +195,7 @@
     .tree
         margin-bottom: 0.1em
         white-space: nowrap
+        line-height: 1
 
     .newNodeButton
         margin-left: 1.5em
