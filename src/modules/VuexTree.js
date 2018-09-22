@@ -85,7 +85,7 @@ export default {
         newNodeIDs.push(node.id);
         newIDCount++;
 
-        node.text = rawNode.text || "New Node ";
+        node.text = rawNode.text || "New Node";
         node.icon = rawNode.icon || "";
         node.link = rawNode.link || null;
         node.parent = rawNode.parent || null;
@@ -175,7 +175,7 @@ export default {
             console.error("Tree Error. " + node.previousSibling + " appears after two nodes.");
             errors = true;
           }
-          newNextLinks[node.previousSibling = node.id];
+          newNextLinks[node.previousSibling] = node.id;
         } else {
           if (childrenLists[parentID].length > 0) {
             let first = childrenLists[parentID][0];
@@ -215,7 +215,6 @@ export default {
       }
     },
     checkNode(state, {nodeID, newValue}) {
-      console.log("made it to vuex")
       let node;
       // Deal with single check trees
       if (state.singleCheckOnly) {
@@ -323,19 +322,21 @@ export default {
         state.rootNodes.splice(index, 1);
       }
       // Add into new sibling list if necessary
+      let newNext;
       if (newPrevious != null) {
         if (newPrevious.nextSibling != null) {
-          let newNext = state.nodes[newPrevious.nextSibling];
+          newNext = state.nodes[newPrevious.nextSibling];
           newNext.previousSibling = nodeID;
         }
         newPrevious.nextSibling = nodeID;
       } else if (newParentID == null) {
-        let newNext = state.nodes[state.rootNodes[0]];
+        newNext = state.nodes[state.rootNodes[0]];
         newNext.previousSibling = nodeID;
       } else if (newParent.children.length > 0) {
-        let newNext = state.nodes[newParent.children[0]];
+        newNext = state.nodes[newParent.children[0]];
         newNext.previousSibling = nodeID;
       }
+      let newNextID = newNext == null ? null : newNext.id;
       // Add to new parent list
       if (newParent != null) {
         let newParentNodeChildren = newParent.children;
@@ -348,6 +349,7 @@ export default {
       }
       // Update nodeID's references
       node.previousSibling = newPreviousID;
+      node.nextSibling = newNextID;
       node.parent = newParentID;
       // Update new and old ancestors
       updateAncestorCheck(state, newParentID);
