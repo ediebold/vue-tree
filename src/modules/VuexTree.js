@@ -82,6 +82,7 @@ export default {
           console.log("Tree Warning. A node with id " + rawNode.id + " already exists. It will be overwritten.");
         }
         node.id = rawNode.id || "t" + (state.newIDCount + newIDCount);
+        node.id = node.id.toString();
         newNodeIDs.push(node.id);
         newIDCount++;
 
@@ -89,7 +90,13 @@ export default {
         node.icon = rawNode.icon || "";
         node.link = rawNode.link || null;
         node.parent = rawNode.parent || null;
+        if (node.parent !== null) {
+          node.parent = node.parent.toString();
+        }
         node.previousSibling = rawNode.previousSibling;
+        if (node.previousSibling != null && node.previousSibling !== undefined) {
+          node.previousSibling = node.previousSibling.toString();
+        }
         node.checked = rawNode.checked || false;
         node.selected = rawNode.selected || false;
         // For simplicity's sake, these values are purged from input
@@ -120,7 +127,7 @@ export default {
         // Set up parent's reference to node
         let parentID = node.parent == null ? "__root" : node.parent;
         // Error if the parent doesn't exist
-        if (parentID != "__root" && !oldNodeIDs.includes(parentID.toString()) && !newNodeIDs.includes(parentID)) {
+        if (parentID != "__root" && !oldNodeIDs.includes(parentID) && !newNodeIDs.includes(parentID)) {
           console.error("Tree Error. " + node.id + " has " + parentID + " as a parent, but that node does not exist.");
           errors = true;
         }
