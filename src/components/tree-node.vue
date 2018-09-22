@@ -115,6 +115,12 @@ export default {
       this.treeEventBus.$emit('endTextUpdate', {id: this.data.id, newText: this.editedText});
     },
     toggleChecked: function() {
+      console.log("made it to tree-node click event")
+      // Dirty hack to get around a bug in Vue where checkboxes would appear checked
+      // even though the props were false.
+      this.$nextTick(() => {
+        this.$refs.checkbox.$forceUpdate();
+      });
       this.treeEventBus.$emit('updateCheck', {id: this.data.id, value: !this.data.checked});
     },
     toggleSelect: function() {
