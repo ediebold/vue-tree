@@ -1,19 +1,20 @@
 <template>
   <li 
   :class="classes"
-  :data-node-id="data.id">
+  :data-node-id="nodeID">
     <template
-    v-if="data.id !== null">
+    v-if="nodeID !== null">
       <font-awesome-icon 
       :icon="expandIcon || 'circle'" 
       fixed-width 
       :class="expandIconClasses"
       @click="toggleExpand" />
-
+      {{nodeData.selected}}
+      {{nodeData.checked}} 
       <component 
       :is="checkboxComponent"
       ref="checkbox"
-      :check="data.checked" 
+      :check="nodeData.checked" 
       @click.native.prevent.stop="toggleChecked" 
       :disabled="singleCheck && !isLeaf" />
       
@@ -24,23 +25,23 @@
       @contextmenu.stop.prevent="openContext($event)">
         <component
         :is="iconComponent"
-        :icon="data.icon"
+        :icon="nodeData.icon"
         :color="iconColor"
         class="tree-icon" />
         
         <div 
         v-if="!currentlyEditingText"
         class="tree-text"
-        :title="data.text">
+        :title="nodeData.text">
           <a 
           target="_blank"
-          v-if="data.link" 
-          :href="data.link" >
-            {{ data.text }}
+          v-if="nodeData.link" 
+          :href="nodeData.link" >
+            {{ nodeData.text }}
           </a>
           <template 
           v-else>
-            {{ data.text }}
+            {{ nodeData.text }}
           </template>
         </div>
 
@@ -57,19 +58,19 @@
     <ul 
     v-if="(expanded && !isLeaf)">
       <draggable 
-      :value="children"
+      :value="nodeData.children"
       @end="registerDropUnder"
       :options="{
         group: dragGroup,
         animation: 70,
       }"
-      :data-node-id="data.id" >
+      :data-node-id="nodeData.id" >
         <TreeNode 
-        v-for="node in children" 
-        :key="node.id" 
-        :data="node"
+        v-for="childNodeID in nodeData.children" 
+        :key="childNodeID" 
+        :nodeID="childNodeID"
         :singleCheck="singleCheck"
-        :getChildren="getChildren"
+        :getNodeData="getNodeData"
         :treeEventBus="treeEventBus"
         :checkboxComponent="checkboxComponent"
         :iconComponent="iconComponent"
@@ -88,13 +89,13 @@ export default {
   data: function() {
     return {
       editedText: "",
-      expanded: this.data.id === null,
+      expanded: this.nodeID === null,
     }
   },
   props: {
-    data: {type: Object, required: true},
+    nodeID: {type: String, required: false, default: null},
     singleCheck: {type: Boolean, required: false, default: false},
-    getChildren: {type: Function, required: true},
+    getNodeData: {type: Function, required: true},
     treeEventBus: {type: Object, required: true},
     checkboxComponent: {type: Object, required: true},
     iconComponent: {type: Object, required: true},
@@ -106,40 +107,38 @@ export default {
       if (event.srcEvent) {
         event = event.srcEvent;
       }
-      this.treeEventBus.$emit('context', {id: this.data.id, event: event});
+      this.treeEventBus.$emit('context', {id: this.nodeData.id, event: event});
     },
     beginUpdate: function() {
-      this.editedText = this.data.text;
+      this.editedText = this.nodeData.text;
     },
     endUpdate: function() {
-      this.treeEventBus.$emit('endTextUpdate', {id: this.data.id, newText: this.editedText});
+      this.treeEventBus.$emit('endTextUpdate', {id: this.nodeData.id, newText: this.editedText});
     },
     toggleChecked: function() {
-      this.treeEventBus.$emit('updateCheck', {id: this.data.id, value: !this.data.checked});
+      this.treeEventBus.$emit('updateCheck', {id: this.nodeData.id, value: !this.nodeData.checked});
     },
     toggleSelect: function() {
-      this.treeEventBus.$emit('updateSelect', {id: this.data.id, value: !this.data.selected});
+      this.treeEventBus.$emit('updateSelect', {id: this.nodeData.id, value: !this.nodeData.selected});
     },
     toggleExpand: function() {
       this.expanded = !this.expanded;
-      if (!this.expanded && !this.data.selected) {
-        this.treeEventBus.$emit('reselectDescendants', {id: this.data.id, value: false});
-      }
-      // Dirty hack to get around a bug in Vue where checkboxes would appear checked
-      // even though the props were false.
-      if (this.expanded) {
-        this.$refs.checkbox.$forceUpdate();
+      if (!this.expanded && !this.nodeData.selected) {
+        this.treeEventBus.$emit('reselectDescendants', {id: this.nodeData.id, value: false});
       }
     },
     registerDropUnder: function(event) {
-      this.treeEventBus.$emit('registerDropUnder', {id: this.data.id, event: event});
+      this.treeEventBus.$emit('registerDropUnder', {id: this.nodeData.id, event: event});
     },
   },
   computed: {
+    nodeData: function() {
+      return this.getNodeData(this.nodeID);
+    },
     classes: function() {
       return {
         "tree-node" : true,
-        "selected" : this.data.selected,
+        "selected" : this.nodeData == null ? false : this.nodeData.selected,
         "expanded" : this.expanded,
         "leaf" : this.isLeaf,
         "root" : this.isRoot,
@@ -153,10 +152,12 @@ export default {
       }
     },
     isRoot: function() {
-      return this.data.parent == null;
+      if (this.nodeData == null) return false;
+      return this.nodeData.parent == null;
     },
     isLeaf: function() {
-      return !this.children.length > 0;
+      if (this.nodeData == null) return false;
+      return !this.nodeData.children.length > 0;
     },
     expandIcon: function() {
       if (this.isLeaf) {
@@ -168,13 +169,11 @@ export default {
       }
     },
     iconColor: function() {
-      return this.data.iconColor || '#000';
-    },
-    children: function() {
-      return this.getChildren(this.data.id);
+      return this.nodeData.iconColor || '#000';
     },
     currentlyEditingText: function() {
-      return this.editingText == this.data.id;
+      if (this.nodeData == null) return false;
+      return this.editingText == this.nodeData.id;
     }
   },
   watch: {

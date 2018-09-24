@@ -19,9 +19,9 @@
         </template>
         <div class="tree">
             <TreeNode 
-            :data="{id: null}"
+            :nodeID="null"
             :singleCheck="singleCheck"
-            :getChildren="getChildren"
+            :getNodeData="getNodeData"
             :treeEventBus="treeEventBus"
             :checkboxComponent="checkboxComponent"
             :iconComponent="iconComponent"
@@ -67,20 +67,30 @@
         },
         methods: {
             // Function passed down to nodes
-            getChildren: function(id) {
-                return this.$store.getters[this.namespace + '/getNodeChildren'](id);
+            getNodeData: function(id) {
+                if (id == null) {
+                    return {children: this.$store.getters[this.namespace + '/getRootNodes']};
+                }
+                return this.$store.getters[this.namespace + '/getNodes'][id];
             },
             //Event bus functions
             updateCheck: function(data) {
+                this.$store.dispatch(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value});
                 // Dirty hack to get around a bug in Vue where checkboxes would appear checked
                 // even though the props were false.
                 this.$nextTick(() => {
+                    console.log("ASD");
                     this.$forceUpdate();
                 });
-                this.$store.commit(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value})
             },
             updateSelect: function(data) {
-                this.$store.commit(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
+                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value});
+                // Dirty hack to get around a bug in Vue where checkboxes would appear checked
+                // even though the props were false.
+                this.$nextTick(() => {
+                    console.log("ASD");
+                    this.$forceUpdate();
+                });
             },
             openContextMenu: function(data) {
                 this.contextEvent = data.event.currentTarget;
@@ -95,13 +105,13 @@
                 if (data.event.to.attributes["data-node-id"]) {
                     newParentID = data.event.to.attributes["data-node-id"].value;
                 }
-                let newSiblings = this.getChildren(newParentID);
+                let newSiblings = this.getNodeData(newParentID).children;
                 let newPreviousID = null;
                 if (data.event.newIndex > 0) {
                     if (data.event.from == data.event.to && data.event.newIndex > data.event.oldIndex) {
-                        newPreviousID = newSiblings[data.event.newIndex].id;
+                        newPreviousID = newSiblings[data.event.newIndex];
                     } else {
-                        newPreviousID = newSiblings[data.event.newIndex - 1].id;
+                        newPreviousID = newSiblings[data.event.newIndex - 1];
                     }
                 }
                 this.$store.commit(this.namespace + '/moveNode', {nodeID: nodeID, newParentID: newParentID, newPreviousID: newPreviousID});

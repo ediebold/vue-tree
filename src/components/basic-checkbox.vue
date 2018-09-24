@@ -1,10 +1,13 @@
 <template>
+<div>
+    {{check}}
     <input 
     type="checkbox"
     class="tree-basic-checkbox"
-    :checked="check"
+    v-model="check"
     :indeterminate.prop="check =='indet'" 
     :disabled="disabled" />
+</div>
 </template>
 
 <script>

@@ -86,7 +86,7 @@ export default {
         newNodeIDs.push(node.id);
         newIDCount++;
 
-        node.text = rawNode.text || "New Node";
+        node.text = rawNode.text || "New Node" + node.id;
         node.icon = rawNode.icon || "";
         node.link = rawNode.link || null;
         node.parent = rawNode.parent || null;
@@ -298,7 +298,7 @@ export default {
     },
     moveNode(state, {nodeID, newParentID, newPreviousID}) {
       let node = state.nodes[nodeID];
-      let newParent = newParentID == null ? null : state.nodes[newParentID];
+      let newParent = newParentID == null ? {children: state.rootNodes} : state.nodes[newParentID];
       // If newPreviousID is undefined, we add it to the end of the siblings
       if (newPreviousID === undefined) {
         if (newParent.children.length == 0) {
@@ -345,7 +345,7 @@ export default {
       }
       let newNextID = newNext == null ? null : newNext.id;
       // Add to new parent list
-      if (newParent != null) {
+      if (newParentID != null) {
         let newParentNodeChildren = newParent.children;
         let index = newParentNodeChildren.indexOf(newPreviousID) + 1;
         newParentNodeChildren.splice(index, 0, nodeID);
@@ -420,11 +420,7 @@ export default {
       return Object.values(state.nodes).filter(node => node.selected);
     },
     getRootNodes (state) {
-      let rootNodes = []
-      for (let rootID of state.rootNodes) {
-        rootNodes.push(state.nodes[rootID]);
-      };
-      return rootNodes;
+      return state.rootNodes;
     },
     getNodes (state) {
       return state.nodes;
@@ -499,6 +495,18 @@ export default {
       root: true,
       handler(context, treeStateName) {
         context.commit('switchToTreeState', treeStateName)
+      }
+    },
+    checkNode: {
+      root: false,
+      handler(context, payload) {
+        context.commit('checkNode', payload)
+      }
+    },
+    selectNode: {
+      root: false,
+      handler(context, payload) {
+        context.commit('selectNode', payload)
       }
     },
   }
