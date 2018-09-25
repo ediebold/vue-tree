@@ -76,21 +76,9 @@
             //Event bus functions
             updateCheck: function(data) {
                 this.$store.dispatch(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value});
-                // Dirty hack to get around a bug in Vue where checkboxes would appear checked
-                // even though the props were false.
-                this.$nextTick(() => {
-                    console.log("ASD");
-                    this.$forceUpdate();
-                });
             },
             updateSelect: function(data) {
                 this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value});
-                // Dirty hack to get around a bug in Vue where checkboxes would appear checked
-                // even though the props were false.
-                this.$nextTick(() => {
-                    console.log("ASD");
-                    this.$forceUpdate();
-                });
             },
             openContextMenu: function(data) {
                 this.contextEvent = data.event.currentTarget;

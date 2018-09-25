@@ -9,8 +9,6 @@
       fixed-width 
       :class="expandIconClasses"
       @click="toggleExpand" />
-      {{nodeData.selected}}
-      {{nodeData.checked}} 
       <component 
       :is="checkboxComponent"
       ref="checkbox"
@@ -126,6 +124,10 @@ export default {
       if (!this.expanded && !this.nodeData.selected) {
         this.treeEventBus.$emit('reselectDescendants', {id: this.nodeData.id, value: false});
       }
+      // Dirty hack to get around some weird bug in Vue
+      if (this.expanded) {
+        this.$refs['checkbox'].$forceUpdate();
+      }
     },
     registerDropUnder: function(event) {
       this.treeEventBus.$emit('registerDropUnder', {id: this.nodeData.id, event: event});
@@ -177,7 +179,7 @@ export default {
     }
   },
   watch: {
-    currentlyEditingText: function(newValue, oldvalue) {
+    currentlyEditingText: function(newValue, oldValue) {
       if (newValue) {
         this.beginUpdate();
       }
@@ -242,6 +244,7 @@ export default {
 
         &::before
           border-top: 1px solid #000
+          height: 100%
           top: 0.5em
           width: 0.5em
 
@@ -256,6 +259,8 @@ export default {
         
         .empty-expand-icon
           align-self: stretch
-          border-bottom: 1px solid #000
+          border-top: 1px solid #000
+          border-bottom: 0
+          margin-top: 0.5em
           height: 0.5em
 </style>

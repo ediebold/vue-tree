@@ -1,5 +1,9 @@
 import Vue from 'vue';
 
+function updateNode(state, nodeID, newData) {
+  Vue.set(state.nodes, nodeID, Object.assign({}, state.nodes[nodeID], newData));
+}
+
 function updateAncestorCheck(state, nodeID) {
   let node = {parent: nodeID};
   while (node.parent != null) {
@@ -19,7 +23,7 @@ function updateAncestorCheck(state, nodeID) {
     // If status has changed, set new status and continue,
     // else, we can stop bubbling up.
     if (childrenCheck != originalCheck) {
-      node.checked = childrenCheck;
+      updateNode(state, node.id, { checked: childrenCheck });
     } else {
       break;
     }
@@ -45,7 +49,7 @@ function updateAncestorSelect(state, nodeID) {
     // If status has changed, set new status and continue,
     // else, we can stop bubbling up.
     if (childrenSelect != originalSelect) {
-      node.selected = childrenSelect;
+      updateNode(state, node.id, { selected: childrenSelect });
     } else {
       break;
     }
@@ -205,13 +209,13 @@ export default {
           state.rootNodes = pair[1];
           continue;
         }
-        state.nodes[pair[0]].children = pair[1];
+        updateNode(state, pair[0], { children: pair[1] });
       }
       for (let pair of Object.entries(newPreviousLinks)) {
-        state.nodes[pair[0]].previousSibling = pair[1];
+        updateNode(state, pair[0], { previousSibling: pair[1] });
       }
       for (let pair of Object.entries(newNextLinks)) {
-        state.nodes[pair[0]].nextSibling = pair[1];
+        updateNode(state, pair[0], { nextSibling: pair[1] });
       }
 
       // Update the parent's references
@@ -229,7 +233,7 @@ export default {
         if (node.children.length > 0) {
           return;
         } else {
-          node.checked = newValue;
+          updateNode(state, nodeID, { checked: newValue });
           return;
         }
       }
@@ -240,7 +244,7 @@ export default {
         // If we don't need to change anything, we can
         // stop navigating down this branch.
         if (node.checked !== newValue) {
-          node.checked = newValue;
+          updateNode(state, node.id, { checked: newValue });
           checkList = checkList.concat(node.children);
         }
       }
@@ -258,7 +262,7 @@ export default {
         // If we don't need to change anything, we can
         // stop navigating down this branch.
         if (node.selected !== newValue) {
-          node.selected = newValue;
+          updateNode(state, node.id, { selected: newValue });
           selectList = selectList.concat(node.children);
         }
       }
@@ -289,12 +293,10 @@ export default {
       Vue.delete(state.nodes, nodeID);
     },
     editText(state, {nodeID, newValue}) {
-      let node = state.nodes[nodeID];
-      node.text = newValue;
+      updateNode(state, nodeID, { text: newValue });
     },
     editIcon(state, {nodeID, newValue}) {
-      let node = state.nodes[nodeID];
-      node.icon = newValue;
+      updateNode(state, nodeID, { icon: newValue });
     },
     moveNode(state, {nodeID, newParentID, newPreviousID}) {
       let node = state.nodes[nodeID];
@@ -310,12 +312,10 @@ export default {
       let newPrevious = newPreviousID == null ? null : state.nodes[newPreviousID];
       // Remove from old sibling list if necessary
       if (node.previousSibling != null) {
-        let oldPrev = state.nodes[node.previousSibling];
-        oldPrev.nextSibling = node.nextSibling;
+        updateNode(state, node.previousSibling, { nextSibling: node.nextSibling });
       }
       if (node.nextSibling != null) {
-        let oldNext = state.nodes[node.nextSibling];
-        oldNext.previousSibling = node.previousSibling;
+        updateNode(state, node.nextSibling, { previousSibling: node.previousSibling });
       }
       //Remove from old parent list
       let oldParentID = node.parent;
@@ -337,11 +337,9 @@ export default {
         }
         newPrevious.nextSibling = nodeID;
       } else if (newParentID == null) {
-        newNext = state.nodes[state.rootNodes[0]];
-        newNext.previousSibling = nodeID;
+        updateNode(state, state.rootNodes[0], { previousSibling: nodeID });
       } else if (newParent.children.length > 0) {
-        newNext = state.nodes[newParent.children[0]];
-        newNext.previousSibling = nodeID;
+        updateNode(state, newParent.children[0], { previousSibling: nodeID });
       }
       let newNextID = newNext == null ? null : newNext.id;
       // Add to new parent list
@@ -355,9 +353,12 @@ export default {
         state.rootNodes.splice(index, 0, nodeID);
       }
       // Update nodeID's references
-      node.previousSibling = newPreviousID;
-      node.nextSibling = newNextID;
-      node.parent = newParentID;
+      updateNode(state, nodeID, { 
+        previousSibling: newPreviousID,
+        nextSibling: newNextID,
+        parent: newParentID,
+      });
+
       // Update new and old ancestors
       updateAncestorCheck(state, newParentID);
       updateAncestorSelect(state, newParentID);
@@ -367,13 +368,13 @@ export default {
     setSingleCheckOnly(state, newValue) {
       state.singleCheckOnly = newValue;
       for (let node of Object.values(state.nodes)) {
-        node.checked = false;
+        updateNode(state, node.id, { checked: false });
       }
     },
     setSeparateSelection(state, newValue) {
       state.separateSelection = newValue;
       for (let node of Object.values(state.nodes)) {
-        node.selected = false;
+        updateNode(state, node.id, { selected: false });
       }
     },
     setAllowedChildrenCheck(state, newValue) {
@@ -396,9 +397,9 @@ export default {
       let goalTreeState = state.treestates[treeStateName];
       for (let node of Object.values(state.nodes)) {
         if (goalTreeState.includes(node.id)) {
-          node.checked = true;
+          updateNode(state, node.id, { checked: true });
         } else {
-          node.checked = false;
+          updateNode(state, node.id, { checked: false });
         }
         // TODO: Track already touched to avoid redoing work.
         updateAncestorCheck(state, node.parent);
