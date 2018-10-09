@@ -111,16 +111,23 @@ export default {
         if (node.previousSibling === undefined) {
           nodesNoPrevious.push(node);
         } else {
-          // Place before any node that has us as a previously.
-          let nextIndex = nodes.findIndex(tnode => tnode.previousSibling == node.id);
-          if (nextIndex > 0) {
-            nodes.splice(nextIndex, 0, node);
-          } else {
-            nodes.push(node);
-          }
+          nodes.push(node);
+        }
+      }
+
+      // Organise nodes into correct order
+      for (let i = 0; i < nodes.length; i++) {
+        let node = nodes[i];
+        if (node.previousSibling == null) continue;
+        let prevIndex = nodes.findIndex(tnode => tnode.id == node.previousSibling);
+        if (prevIndex > i) {
+          nodes.splice(i, 1);
+          nodes.splice(prevIndex, 0, node);
+          i--;
         }
       }
       nodes = nodes.concat(nodesNoPrevious);
+      
       // Second pass - verify tree integrity and create links where necessary
       let childrenLists = {};
       let newPreviousLinks = {};
@@ -411,6 +418,8 @@ export default {
     clear(state) {
       state.treestates = { default: {}};
       state.nodes = {};
+      state.rootNodes = [];
+      state.newIDCount = 0;
     }
   },
   getters: {
