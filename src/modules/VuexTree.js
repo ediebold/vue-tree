@@ -1,98 +1,97 @@
 import Vue from 'vue';
 
+let defaultState = {
+  nodes: {}, // id -> node data
+  recursiveFields: {
+    "selected": false,
+    "checked": "indet"
+  },
+  trackedNodeFields: ["text", "icon", "checked", "previousSibling", "parent"],
+  currentScene: "",
+  scenes: {}, // id -> list of on nodes
+  rootNodes: [],
+  allowedChildrenCheck: null, // validation function
+  newIDCount: 0,
+}
+
 function updateNode(state, nodeID, newData) {
   Vue.set(state.nodes, nodeID, Object.assign({}, state.nodes[nodeID], newData));
 }
 
-function updateAncestorCheck(state, nodeID) {
+function updateAncestorRecursiveField(state, nodeID, field) {
+  // Update status of ancestors
   let node = {parent: nodeID};
   while (node.parent != null) {
     node = state.nodes[node.parent];
-    let originalCheck = node.checked;
+    if (node.children.length == 0) continue;
     // Calculate new status based on children
-    let childrenCheck = null;
+    let childrenVal = null;
     for (let childID of node.children) {
       let child = state.nodes[childID]
-      if (child.checked != childrenCheck && childrenCheck != null) {
-        childrenCheck = "indet";
+      if (child[field] != childrenVal && childrenVal != null) {
+        childrenVal = state.recursiveFields[field];
         break;
-      } else if (childrenCheck == null) {
-        childrenCheck = child.checked;
+      } else if (childrenVal == null) {
+        childrenVal = child[field];
       }
     }
     // If status has changed, set new status and continue,
     // else, we can stop bubbling up.
-    if (childrenCheck != originalCheck) {
-      updateNode(state, node.id, { checked: childrenCheck });
+    if (childrenVal != node[field]) {
+      updateNode(state, node.id, { [field]: childrenVal });
     } else {
       break;
     }
   }
 }
 
-function updateAncestorSelect(state, nodeID) {
-  let node = {parent: nodeID};
-  while (node.parent != null) {
-    node = state.nodes[node.parent];
-    let originalSelect = node.selected;
-    // Calculate new status based on children
-    let childrenSelect = null;
-    for (let childID of node.children) {
-      let child = state.nodes[childID]
-      if (child.selected != childrenSelect && childrenSelect != null) {
-        childrenSelect = false;
-        break;
-      } else if (childrenSelect == null) {
-        childrenSelect = child.selected;
-      }
-    }
-    // If status has changed, set new status and continue,
-    // else, we can stop bubbling up.
-    if (childrenSelect != originalSelect) {
-      updateNode(state, node.id, { selected: childrenSelect });
-    } else {
-      break;
+function updateAncestorAllRecursiveFields(state, nodeID) {
+  for (let pair of Object.entries(state.recursiveFields)) {
+    updateAncestorRecursiveField(state, nodeID, pair[0]);
+  }
+}
+
+function updateRecursiveField(state, nodeID, field, newValue) {
+  let editList = [nodeID];
+  while (editList.length > 0) {
+    let node = state.nodes[editList.pop()];
+    // If we don't need to change anything, we can
+    // stop navigating down this branch.
+    if (node[field] !== newValue) {
+      updateNode(state, node.id, { [field]: newValue });
+      editList = editList.concat(node.children);
     }
   }
+  updateAncestorRecursiveField(state, nodeID, field)
 }
 
 export default {
   namespaced: true,
   state () { 
-    return {
-      nodes: {},
-      singleCheckOnly: false,
-      separateSelection: true,
-      newIDCount: 0,
-      allowedChildrenCheck: null,
-      rootNodes: [],
-      treestates: {},
-    }
+    return defaultState;
   },
   mutations: {
+    // A previous of 'undefined' means "slot me at the end". "null" means to put first.
     addNodes(state, rawNodes) {
-      // Mostly atomic (hopefully.)
+      // Mostly atomic
       // Order is irrelevant except where two nodes have the same previously (including undefined).
       // These nodes will be added to the tree in order of discovery.
       let newIDCount = 0;
       let nodes = [];
       let nodesNoPrevious = []; // Used to ensure those without previous are all at the end of the insert.
       let newNodeIDs = [] // Used to veritfy tree structure later.
+
       // First pass - simply set up all nodes in correct format, don't worry about tree integrity yet.
       for (let rawNode of rawNodes) {
         let node = {};
         // Inform the user that we will be overwriting a node that already exists
         if (rawNode.id !== undefined && state.nodes[rawNode.id]) {
-          console.log("Tree Warning. A node with id " + rawNode.id + " already exists. It will be overwritten.");
+          console.log("Tree Warning. A nodeState with id " + rawNode.id + " already exists. It will be overwritten.");
         }
         node.id = rawNode.id || "t" + (state.newIDCount + newIDCount);
         node.id = node.id.toString();
         newNodeIDs.push(node.id);
         newIDCount++;
-
-        node.text = rawNode.text || "New Node" + node.id;
-        node.icon = rawNode.icon || "";
-        node.link = rawNode.link || null;
         node.parent = rawNode.parent || null;
         if (node.parent !== null) {
           node.parent = node.parent.toString();
@@ -101,12 +100,19 @@ export default {
         if (node.previousSibling != null && node.previousSibling !== undefined) {
           node.previousSibling = node.previousSibling.toString();
         }
-        node.checked = rawNode.checked || false;
-        node.selected = rawNode.selected || false;
         // For simplicity's sake, these values are purged from input
         // and calculated in the tree to allow simple insertion.
         node.children = [];
         node.nextSibling = null;
+
+        for (let pair of Object.entries(state.recursiveFields)) {
+          node[pair[0]] = false;
+        }
+        for (let field of state.trackedNodeFields) {
+          if (node[field] !== undefined) continue;
+          if (field == "parent" || field == "previousSibling" || field == "nextsibling" || field == "children") continue;
+          node[field] = rawNode[field] || null;
+        }
         // Place in correct spot in array to avoid ordering issues later.
         if (node.previousSibling === undefined) {
           nodesNoPrevious.push(node);
@@ -179,7 +185,7 @@ export default {
           }
           if (previous.nextSibling != null) {
             if (newPreviousLinks.hasOwnProperty(previous.nextSibling)) {
-              console.error("Tree Error. " + previous.nextSibling + " appears before two nodes.");
+              console.error("Tree Error. " + previous.nextSibling + " appears before two nodeStates.");
               errors = true;
             }
             if (newNextLinks.hasOwnProperty(node.id)) {
@@ -224,60 +230,35 @@ export default {
       for (let pair of Object.entries(newNextLinks)) {
         updateNode(state, pair[0], { nextSibling: pair[1] });
       }
-
-      // Update the parent's references
-      // TODO: only do at end to avoid redoing work.
       for (let node of nodes) {
-        updateAncestorCheck(state, node.parent);
-        updateAncestorSelect(state, node.parent);
+        updateAncestorAllRecursiveFields(state, node.id);
       }
     },
-    checkNode(state, {nodeID, newValue}) {
-      let node;
-      // Deal with single check trees
-      if (state.singleCheckOnly) {
-        node = state.nodes[nodeID];
-        if (node.children.length > 0) {
-          return;
-        } else {
-          updateNode(state, nodeID, { checked: newValue });
-          return;
-        }
+    //TODO: single check.
+    editNodeField(state, {nodeID, field, newValue}) {
+      // Recursive fields.
+      if (state.recursiveFields.hasOwnProperty(field)) {
+        updateRecursiveField(state, nodeID, field, newValue)
+      // Single fields
+      } else {
+        updateNode(state, nodeID, { [field]: newValue });
       }
-      let checkList = [nodeID];
-      // Check self and descendants
-      while (checkList.length > 0) {
-        node = state.nodes[checkList.pop()];
-        // If we don't need to change anything, we can
-        // stop navigating down this branch.
-        if (node.checked !== newValue) {
-          updateNode(state, node.id, { checked: newValue });
-          checkList = checkList.concat(node.children);
-        }
-      }
-      // Update status of ancestors
-      updateAncestorCheck(state, state.nodes[nodeID].parent);
-    },
-    selectNode(state, {nodeID, newValue}) {
-      // Skip if not using separate selection
-      if (!state.separateSelection) return;
-      let selectList = [nodeID];
-      let node;
-      // Select self and descendants
-      while (selectList.length > 0) {
-        node = state.nodes[selectList.pop()];
-        // If we don't need to change anything, we can
-        // stop navigating down this branch.
-        if (node.selected !== newValue) {
-          updateNode(state, node.id, { selected: newValue });
-          selectList = selectList.concat(node.children);
-        }
-      }
-      // Update status of ancestors
-      updateAncestorSelect(state, state.nodes[nodeID].parent);
     },
     deleteNode(state, {nodeID}) {
       let node = state.nodes[nodeID];
+      // Delete all descendants
+      let deleteList = [];
+      let checkList = [nodeID];
+      while (checkList.length > 0) {
+        let tempNode = state.nodes[checkList.pop()];
+        deleteList = deleteList.concat(tempNode.id);
+        if (tempNode.children.length > 0) {
+          checkList = checkList.concat(tempNode.children);
+        }
+      }
+      for (let tempNode of deleteList) {
+        Vue.delete(state.nodes, tempNode);
+      }
       // Update references of adjacent siblings
       if (node.previousSibling != null) {
         let prev = state.nodes[node.previousSibling];
@@ -298,12 +279,6 @@ export default {
         state.rootNodes.splice(index, 1);
       }
       Vue.delete(state.nodes, nodeID);
-    },
-    editText(state, {nodeID, newValue}) {
-      updateNode(state, nodeID, { text: newValue });
-    },
-    editIcon(state, {nodeID, newValue}) {
-      updateNode(state, nodeID, { icon: newValue });
     },
     moveNode(state, {nodeID, newParentID, newPreviousID}) {
       let node = state.nodes[nodeID];
@@ -367,59 +342,42 @@ export default {
       });
 
       // Update new and old ancestors
-      updateAncestorCheck(state, newParentID);
-      updateAncestorSelect(state, newParentID);
-      updateAncestorCheck(state, oldParentID);
-      updateAncestorSelect(state, oldParentID);
-    },
-    setSingleCheckOnly(state, newValue) {
-      state.singleCheckOnly = newValue;
-      for (let node of Object.values(state.nodes)) {
-        updateNode(state, node.id, { checked: false });
-      }
-    },
-    setSeparateSelection(state, newValue) {
-      state.separateSelection = newValue;
-      for (let node of Object.values(state.nodes)) {
-        updateNode(state, node.id, { selected: false });
-      }
+      updateAncestorAllRecursiveFields(state, newParentID)
+      updateAncestorAllRecursiveFields(state, oldParentID)
     },
     setAllowedChildrenCheck(state, newValue) {
       state.allowedChildrenCheck = newValue;
     },
-    saveCurrentTreeState(state, treeStateName) {
-      let newTreeState = [];
+    saveCurrentAsScene(state, sceneName) {
+      let newScene = [];
       for (let node of Object.values(state.nodes)) {
         if (node.checked === true && node.children.length == 0) {
-          newTreeState.push(node.id);
+          newScene.push(node.id);
         }
       }
-      Vue.set(state.treestates, treeStateName, newTreeState);
+      Vue.set(state.scenes, sceneName, newScene);
     },
-    switchToTreeState(state, treeStateName) {
-      if(state.treestates[treeStateName] === undefined) {
-        console.error("State " + treeStateName + " could not be found.");
+    switchToScene(state, sceneName) {
+      if(state.scenes[sceneName] === undefined) {
+        console.error("Scene " + sceneName + " could not be found.");
         return;
       }
-      let goalTreeState = state.treestates[treeStateName];
+      let goalScene = state.scenes[sceneName];
       for (let node of Object.values(state.nodes)) {
-        if (goalTreeState.includes(node.id)) {
+        if (goalScene.includes(node.id)) {
           updateNode(state, node.id, { checked: true });
+          updateAncestorAllRecursiveFields(state, node.id);
         } else {
           updateNode(state, node.id, { checked: false });
+          updateAncestorAllRecursiveFields(state, node.id);
         }
-        // TODO: Track already touched to avoid redoing work.
-        updateAncestorCheck(state, node.parent);
       }
     },
-    addTreeState(state, {treeStateName, treeStateData}) {
-      Vue.set(state.treestates, treeStateName, treeStateData);
+    addScene(state, {sceneName, sceneNodes}) {
+      Vue.set(state.scenes, sceneName, sceneNodes);
     },
     clear(state) {
-      state.treestates = { default: {}};
-      state.nodes = {};
-      state.rootNodes = [];
-      state.newIDCount = 0;
+      state = defaultState;
     }
   },
   getters: {
@@ -487,36 +445,24 @@ export default {
       }
       return ancestors;
     },
-    getTreeStateNames(state) {
-      return Object.keys(state.treestates);
+    getSceneNames(state) {
+      return Object.keys(state.scenes);
     },
-    getTreeState: (state) => (treeStateName) => {
-      return state.treestates[treeStateName];
+    getScene: (state) => (sceneName) => {
+      return state.scenes[sceneName];
     }
   },
   actions: {
-    saveCurrentTreeState: {
+    saveCurrentAsScene: {
       root: true,
-      handler(context, treeStateName) {
-        context.commit('saveCurrentTreeState', treeStateName)
+      handler(context, sceneName) {
+        context.commit('saveCurrentAsScene', sceneName)
       }
     },
-    switchToTreeState: {
+    switchToScene: {
       root: true,
-      handler(context, treeStateName) {
-        context.commit('switchToTreeState', treeStateName)
-      }
-    },
-    checkNode: {
-      root: false,
-      handler(context, payload) {
-        context.commit('checkNode', payload)
-      }
-    },
-    selectNode: {
-      root: false,
-      handler(context, payload) {
-        context.commit('selectNode', payload)
+      handler(context, sceneName) {
+        context.commit('switchToScene', sceneName)
       }
     },
   }

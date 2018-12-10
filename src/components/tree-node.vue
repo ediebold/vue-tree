@@ -22,6 +22,7 @@
       v-hammer:press="openContext"
       @contextmenu.stop.prevent="openContext($event)">
         <component
+        v-if="nodeData.icon"
         :is="iconComponent"
         :icon="nodeData.icon"
         :color="iconColor"

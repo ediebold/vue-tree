@@ -20,7 +20,6 @@
         <div class="tree">
             <TreeNode 
             :nodeID="null"
-            :singleCheck="singleCheck"
             :getNodeData="getNodeData"
             :treeEventBus="treeEventBus"
             :checkboxComponent="checkboxComponent"
@@ -57,8 +56,6 @@
         props: {
             namespace: {type: String, required: true},
             treeEvents: {type: Object, required: false, default: {}},
-            separateSelection: {type: Boolean, required: false, default: true},
-            singleCheck: {type: Boolean, required: false, default: false},
             allowedChildrenCheck: {type: Function, required: false, default: null},
             checkboxComponent: {type: Object, required: false, default: () => BasicCheckbox},
             iconComponent: {type: Object, required: false, default: () => BasicIcon},
@@ -75,17 +72,17 @@
             },
             //Event bus functions
             updateCheck: function(data) {
-                this.$store.dispatch(this.namespace + '/checkNode', {nodeID: data.id, newValue: data.value});
+                this.$store.commit(this.namespace + '/editNodeField', {nodeID: data.id, field: "checked", newValue: data.value});
             },
             updateSelect: function(data) {
-                this.$store.dispatch(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value});
+                this.$store.commit(this.namespace + '/editNodeField', {nodeID: data.id, field: "selected", newValue: data.value});
             },
             openContextMenu: function(data) {
                 this.contextEvent = data.event.currentTarget;
                 this.$refs.vuetreemenu.open(data.event, data.id);
             },
             reselectDescendants: function(data) {
-                this.$store.commit(this.namespace + '/selectNode', {nodeID: data.id, newValue: data.value})
+                this.$store.commit(this.namespace + '/editNodeField', {nodeID: data.id, field: "selected", newValue: data.value})
             },
             registerDropUnder: function(data) {
                 let nodeID = data.event.item.attributes["data-node-id"].value
@@ -110,45 +107,35 @@
             },
             endEditText: function(data) {
                 this.editingText = null;
-                this.$store.commit(this.namespace + '/editText', {nodeID: data.id, newValue: data.newText})
+                this.$store.commit(this.namespace + '/editNodeField', 
+                    {nodeID: data.id, field: "text", newValue: data.newText})
             },
             beginEditIcon: function(e, id) {
                 this.editingIcon = id;
                 this.$refs.iconPicker.open(this.contextEvent);
             },
             endEditIcon: function(newIcon) {
-                this.$store.commit(this.namespace + '/editIcon', {nodeID: this.editingIcon, newValue: newIcon})
+                this.$store.commit(this.namespace + '/editNodeField', 
+                    {nodeID: this.editingIcon, field: "icon", newValue: newIcon})
                 this.editingIcon = null;
             },
             // Tree manipulation
             addChildNode: function(id) {
-                this.$store.commit(this.namespace + '/addNodes', [{parent: id}])
+                this.$store.commit(this.namespace + '/addNodes', [{parent: id, text: "New Child"}])
             },
             deleteNode: function(id) {
                 this.$store.commit(this.namespace + '/deleteNode', {nodeID: id})
             },
             makeRootNode: function() {
-                this.$store.commit(this.namespace + '/addNodes', [{}])
+                this.$store.commit(this.namespace + '/addNodes', [{text: "New Node"}])
             },
         },
         watch: {
-            singleCheck: function(newValue, oldvalue) {
-                this.$store.commit(this.namespace + '/setSingleCheckOnly', newValue);
-            },
-            separateSelection: function(newValue, oldvalue) {
-                this.$store.commit(this.namespace + '/setSeparateSelection', newValue);
-            },
             allowedChildrenCheck: function(newValue, oldvalue) {
                 this.$store.commit(this.namespace + '/setAllowedChildrenCheck', newValue);
             },
         },
         created: function() {
-            if (this.singleCheck) {
-                this.$store.commit(this.namespace + '/setSingleCheckOnly', true);
-            }
-            if (!this.separateSelection) {
-                this.$store.commit(this.namespace + '/setSeparateSelection', false);
-            }
             if (this.allowedChildrenCheck) {
                 this.$store.commit(this.namespace + '/setAllowedChildrenCheck', this.allowedChildrenCheck);
             }
@@ -163,13 +150,13 @@
 
 
             this.$store.subscribe(mutation => {
-                if (mutation.type === this.namespace + '/checkNode' && this.treeEvents.checked) {
+                if (mutation.type === this.namespace + '/editNodeField' && mutation.payload.field == "checked" && this.treeEvents.checked) {
                     this.treeEvents.checked(mutation.payload.nodeID, mutation.payload.newValue);
                 } else if (mutation.type === this.namespace + '/moveNode' && this.treeEvents.moveNode) {
                     this.treeEvents.moveNode(mutation.payload);
-                } else if (mutation.type === this.namespace + '/selectNode' && this.treeEvents.selected) {
+                } else if (mutation.type === this.namespace + '/editNodeField' && mutation.payload.field == "selected" && this.treeEvents.selected) {
                     this.treeEvents.selected(mutation.payload.nodeID, mutation.payload.newValue);
-                } else if (mutation.type === this.namespace + '/switchState' && this.treeEvents.checked) {
+                } else if (mutation.type === this.namespace + '/switchToScene' && this.treeEvents.checked) {
                     for (rootNode of this.$store.getters[this.namespace + '/getRootNodes']) {
                         this.treeEvents.checked(rootNode.id, node.checked);
                     }

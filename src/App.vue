@@ -7,9 +7,7 @@
                 <div style="font-size: 18px; width: 300px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
                     <br />
                     <v-tree 
-                    :treeEvents="treeEvents" 
-                    :separateSelection="true"
-                    :singleCheck="false" 
+                    :treeEvents="treeEvents"
                     :namespace="namespace" 
                     :iconComponent="iconType" 
                     :iconPickComponent="false" 
@@ -17,10 +15,10 @@
                     <br />
                 </div>
                 <button style="clear: both; display: block;" @click="insertUnsorted">Test Unsorted Insert</button>
-                <button v-for="state in states" @click="loadState(state)">{{ state }}</button>
+                <button v-for="scene in scenes" @click="loadScene(scene)">{{ scene }}</button>
                 <hr />
-                <input type="text" v-model="newStateName" />
-                <button @click="saveState(newStateName)">Save Current State</button>
+                <input type="text" v-model="newSceneName" />
+                <button @click="saveScene(newSceneName)">Save Current Scene</button>
             </div>
         </div>
     </div>
@@ -47,7 +45,7 @@ export default {
                     },
                 ],
             },
-            newStateName: "",
+            newSceneName: "",
             iconType: ImageIcon
         }
     },
@@ -73,16 +71,16 @@ export default {
             }
             return true;
         },
-        saveState: function(stateName) {
-            this.$store.dispatch("saveCurrentTreeState", stateName);
+        saveScene: function(sceneName) {
+            this.$store.dispatch("saveCurrentAsScene", sceneName);
         },
-        loadState: function(stateName) {
-            this.$store.dispatch("switchToTreeState", stateName);
+        loadScene: function(sceneName) {
+            this.$store.dispatch("switchToScene", sceneName);
         },
     },
     computed: {
-        states: function() {
-            return this.$store.getters[this.namespace + '/getTreeStateNames'];
+        scenes: function() {
+            return this.$store.getters[this.namespace + '/getSceneNames'];
         }
     }
 }
