@@ -1,17 +1,19 @@
 import Vue from 'vue';
 
-let defaultState = {
-  nodes: {}, // id -> node data
-  recursiveFields: {
-    "selected": false,
-    "checked": "indet"
-  },
-  trackedNodeFields: ["text", "icon", "checked", "previousSibling", "parent"],
-  currentScene: "",
-  scenes: {}, // id -> list of on nodes
-  rootNodes: [],
-  allowedChildrenCheck: null, // validation function
-  newIDCount: 0,
+function getDefaultState() {
+  return {
+    nodes: {}, // id -> node data
+    recursiveFields: {
+      "selected": false,
+      "checked": "indet"
+    },
+    trackedNodeFields: ["text", "icon", "checked", "previousSibling", "parent"],
+    currentScene: "",
+    scenes: {}, // id -> list of on nodes
+    rootNodes: [],
+    allowedChildrenCheck: null, // validation function
+    newIDCount: 0,
+  }
 }
 
 function updateNode(state, nodeID, newData) {
@@ -67,9 +69,7 @@ function updateRecursiveField(state, nodeID, field, newValue) {
 
 export default {
   namespaced: true,
-  state () { 
-    return defaultState;
-  },
+  state: getDefaultState(),
   mutations: {
     // A previous of 'undefined' means "slot me at the end". "null" means to put first.
     addNodes(state, rawNodes) {
@@ -377,7 +377,7 @@ export default {
       Vue.set(state.scenes, sceneName, sceneNodes);
     },
     clear(state) {
-      state = defaultState;
+      state = getDefaultState();
     }
   },
   getters: {
