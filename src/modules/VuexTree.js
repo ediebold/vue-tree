@@ -69,7 +69,7 @@ function updateRecursiveField(state, nodeID, field, newValue) {
 
 export default {
   namespaced: true,
-  state: getDefaultState(),
+  state() { return getDefaultState(); },
   mutations: {
     // A previous of 'undefined' means "slot me at the end". "null" means to put first.
     addNodes(state, rawNodes) {
