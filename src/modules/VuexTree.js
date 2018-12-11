@@ -1,21 +1,5 @@
 import Vue from 'vue';
 
-function getDefaultState() {
-  return {
-    nodes: {}, // id -> node data
-    recursiveFields: {
-      "selected": false,
-      "checked": "indet"
-    },
-    trackedNodeFields: ["text", "icon", "checked", "previousSibling", "parent"],
-    currentScene: "",
-    scenes: {}, // id -> list of on nodes
-    rootNodes: [],
-    allowedChildrenCheck: null, // validation function
-    newIDCount: 0,
-  }
-}
-
 function updateNode(state, nodeID, newData) {
   Vue.set(state.nodes, nodeID, Object.assign({}, state.nodes[nodeID], newData));
 }
@@ -69,7 +53,22 @@ function updateRecursiveField(state, nodeID, field, newValue) {
 
 export default {
   namespaced: true,
-  state() { return getDefaultState(); },
+  state() { 
+    return {
+      nodes: {}, // id -> node data
+      recursiveFields: {
+        "selected": false,
+        "checked": "indet"
+      },
+      trackedNodeFields: ["text", "icon", "previousSibling", "parent"],
+      currentScene: "",
+      ignoreGlobalScenes: true,
+      scenes: {}, // id -> list of on nodes
+      rootNodes: [],
+      allowedChildrenCheck: null, // validation function
+      newIDCount: 0,
+    }; 
+  },
   mutations: {
     // A previous of 'undefined' means "slot me at the end". "null" means to put first.
     addNodes(state, rawNodes) {
@@ -348,6 +347,9 @@ export default {
     setAllowedChildrenCheck(state, newValue) {
       state.allowedChildrenCheck = newValue;
     },
+    setIgnoreGlobalScenes(state, newValue) {
+      state.ignoreGlobalScenes = newValue;
+    },
     saveCurrentAsScene(state, sceneName) {
       let newScene = [];
       for (let node of Object.values(state.nodes)) {
@@ -377,7 +379,11 @@ export default {
       Vue.set(state.scenes, sceneName, sceneNodes);
     },
     clear(state) {
-      state = getDefaultState();
+      state.nodes = {};
+      state.currentScene = "";
+      state.scenes = {};
+      state.rootNodes = [];
+      state.newIDCount = 0;
     }
   },
   getters: {
@@ -461,12 +467,14 @@ export default {
     saveCurrentAsScene: {
       root: true,
       handler(context, sceneName) {
+        if (context.state.ignoreGlobalScenes) return;
         context.commit('saveCurrentAsScene', sceneName)
       }
     },
     switchToScene: {
       root: true,
       handler(context, sceneName) {
+        if (context.state.ignoreGlobalScenes) return;
         context.commit('switchToScene', sceneName)
       }
     },

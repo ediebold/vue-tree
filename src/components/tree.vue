@@ -57,6 +57,7 @@
             namespace: {type: String, required: true},
             treeEvents: {type: Object, required: false, default: {}},
             allowedChildrenCheck: {type: Function, required: false, default: null},
+            usesScenes: {type: Boolean, required: false, default: true},
             checkboxComponent: {type: Object, required: false, default: () => BasicCheckbox},
             iconComponent: {type: Object, required: false, default: () => BasicIcon},
             iconPickComponent: {type: [Boolean, Object], required: false, default: () => FloatingIconPicker},
@@ -134,11 +135,15 @@
             allowedChildrenCheck: function(newValue, oldvalue) {
                 this.$store.commit(this.namespace + '/setAllowedChildrenCheck', newValue);
             },
+            usesScenes: function(newValue, oldvalue) {
+                this.$store.commit(this.namespace + '/setIgnoreGlobalScenes', newValue);
+            },
         },
         created: function() {
             if (this.allowedChildrenCheck) {
                 this.$store.commit(this.namespace + '/setAllowedChildrenCheck', this.allowedChildrenCheck);
             }
+            this.$store.commit(this.namespace + '/setIgnoreGlobalScenes', this.usesScenes);
 
             //Create event bus hooks
             this.treeEventBus.$on("context", this.openContextMenu);
