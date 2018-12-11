@@ -364,7 +364,7 @@ export default {
       }
       let goalScene = state.scenes[sceneName];
       for (let node of Object.values(state.nodes)) {
-        if (goalScene.includes(node.id)) {
+        if (goalScene.includes(node.id) || goalScene.includes(Number(node.id))) {
           updateNode(state, node.id, { checked: true });
           updateAncestorAllRecursiveFields(state, node.id);
         } else {
