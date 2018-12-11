@@ -419,7 +419,12 @@ export default {
     },
     getLeaves: (state) => (id) => {
       let leaves = [];
-      let checkChildren = state.nodes[id].children.slice(0);
+      let checkChildren;
+      if (id == null) {
+        checkChildren = state.rootNodes.slice(0);
+      } else {
+        checkChildren = state.nodes[id].children.slice(0);
+      }
       let curNodeChildren = [];
       if (checkChildren.length < 1) return [id];
       while (checkChildren.length > 0) {
