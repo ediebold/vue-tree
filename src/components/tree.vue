@@ -158,7 +158,7 @@
                     this.treeEvents.selected(mutation.payload.nodeID, mutation.payload.newValue);
                 } else if (mutation.type === this.namespace + '/switchToScene' && this.treeEvents.checked) {
                     for (let rootNode of this.$store.getters[this.namespace + '/getRootNodes']) {
-                        this.treeEvents.checked(rootNode.id, node.checked);
+                        this.treeEvents.checked(rootNode.id, rootNode.checked);
                     }
                 }
             })
