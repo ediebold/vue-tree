@@ -105,7 +105,7 @@ export default {
         node.nextSibling = null;
 
         for (let pair of Object.entries(state.recursiveFields)) {
-          node[pair[0]] = false;
+          node[pair[0]] = rawNode[pair[0]] || false;
         }
         for (let field of state.trackedNodeFields) {
           if (node[field] !== undefined) continue;
@@ -177,6 +177,9 @@ export default {
           }
         }
         let previous = node.previousSibling == null ? null : state.nodes[node.previousSibling];
+        if (previous === undefined) {
+          previous = nodes.find(tNode => tNode.id == node.previousSibling);
+        }
         if (previous != null) {
           if (previous.parent != node.parent) {
             console.error("Tree Error. " + node.id + " has " + node.previousSibling + " as a previous sibling, but that node does not have the same parent.");

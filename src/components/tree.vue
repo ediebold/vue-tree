@@ -136,14 +136,14 @@
                 this.$store.commit(this.namespace + '/setAllowedChildrenCheck', newValue);
             },
             usesScenes: function(newValue, oldvalue) {
-                this.$store.commit(this.namespace + '/setIgnoreGlobalScenes', newValue);
+                this.$store.commit(this.namespace + '/setIgnoreGlobalScenes', !newValue);
             },
         },
         created: function() {
             if (this.allowedChildrenCheck) {
                 this.$store.commit(this.namespace + '/setAllowedChildrenCheck', this.allowedChildrenCheck);
             }
-            this.$store.commit(this.namespace + '/setIgnoreGlobalScenes', this.usesScenes);
+            this.$store.commit(this.namespace + '/setIgnoreGlobalScenes', !this.usesScenes);
 
             //Create event bus hooks
             this.treeEventBus.$on("context", this.openContextMenu);
