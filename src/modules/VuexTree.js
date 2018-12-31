@@ -284,6 +284,7 @@ export default {
     },
     moveNode(state, {nodeID, newParentID, newPreviousID}) {
       let node = state.nodes[nodeID];
+      if (node.parent == newParentID && node.previousSibling == newPreviousID) return;
       let newParent = newParentID == null ? {children: state.rootNodes} : state.nodes[newParentID];
       // If newPreviousID is undefined, we add it to the end of the siblings
       if (newPreviousID === undefined) {
@@ -313,19 +314,18 @@ export default {
         state.rootNodes.splice(index, 1);
       }
       // Add into new sibling list if necessary
-      let newNext;
+      let newNextID;
       if (newPrevious != null) {
-        if (newPrevious.nextSibling != null) {
-          newNext = state.nodes[newPrevious.nextSibling];
-          newNext.previousSibling = nodeID;
-        }
-        newPrevious.nextSibling = nodeID;
+        newNextID = newPrevious.nextSibling;
+        updateNode(state, newPrevious.id, { nextSibling: nodeID });
       } else if (newParentID == null) {
-        updateNode(state, state.rootNodes[0], { previousSibling: nodeID });
+        newNextID = state.rootNodes[0];
       } else if (newParent.children.length > 0) {
-        updateNode(state, newParent.children[0], { previousSibling: nodeID });
+        newNextID = newParent.children[0];
       }
-      let newNextID = newNext == null ? null : newNext.id;
+      if (newNextID != null) {
+        updateNode(state, newNextID, { previousSibling: nodeID });
+      }
       // Add to new parent list
       if (newParentID != null) {
         let newParentNodeChildren = newParent.children;
