@@ -2,58 +2,81 @@
   <li 
   :class="classes"
   :data-node-id="nodeID">
-    <template
+    <div
+    class="main-node-container"
     v-if="nodeID !== null">
-      <font-awesome-icon 
-      :icon="expandIcon || 'circle'" 
-      fixed-width 
-      :class="expandIconClasses"
-      @click="toggleExpand" />
-      <component 
-      :is="checkboxComponent"
-      ref="checkbox"
-      :check="nodeData.checked" 
-      @click.native.prevent.stop="toggleChecked" 
-      :disabled="singleCheck && !isLeaf" />
-      
-      <label 
-      class="tree-node-label" 
-      @click="toggleSelect"
-      v-hammer:press="openContext"
-      @contextmenu.stop.prevent="openContext($event)">
-        <component
-        v-if="nodeData.icon"
-        :is="iconComponent"
-        :icon="nodeData.icon"
-        :color="iconColor"
-        class="tree-icon" />
-        
-        <div 
-        v-if="!currentlyEditingText"
-        class="tree-text"
-        :title="nodeData.text">
-          <a 
-          target="_blank"
-          v-if="nodeData.link" 
-          :href="nodeData.link" >
-            {{ nodeData.text }}
-          </a>
-          <template 
-          v-else>
-            {{ nodeData.text }}
-          </template>
-        </div>
+      <div class="expand-click" 
+      @click.prevent.stop="toggleExpand">
+        <slot name="node_expand_icon" :expandStatus="expandStatus">
+          <div 
+          :class="expandIconClasses">
+            {{expandStatus == null ? '' : expandStatus == true ? '−' : '+'}}
+          </div>
+        </slot>
+      </div>
+      <div class="checkbox-click" 
+      @click.prevent.stop="toggleChecked">
+        <slot name="node_checkbox" :nodeData="nodeData">
+          <input 
+            type="checkbox"
+            class="tree-basic-checkbox"
+            :checked="nodeData.checked"
+            :indeterminate.prop="nodeData.checked =='indet'" />
+        </slot>
+      </div>
 
-        <input 
-        type="text" 
-        v-else 
-        v-model="editedText" 
-        v-autowidth="{maxWidth: '80%'}" 
-        @blur="endUpdate" 
-        @keyup.enter="endUpdate" 
-        @click.stop />
-      </label>
-    </template>
+      <div class="tree-node-label-container">
+        <label 
+        class="tree-node-label" 
+        :style="{ color: nodeData.labelColor || 'auto', }"
+        v-hammer:tap="toggleSelect"
+        v-hammer:press="openContext"
+        :hammerOptions.camel.prop="{
+          press: {
+            time: 1250,
+            threshold: 5,
+          }
+        }"
+        @contextmenu.stop.prevent="openContext($event)">
+          <div
+          class="tree-icon"
+          v-if="nodeData.icon">
+            <slot name="node_icon" :nodeData="nodeData" />
+          </div>
+          
+          <div 
+          v-if="!currentlyEditingText"
+          class="tree-text"
+          :title="nodeData.text">
+            <a 
+            target="_blank"
+            class="node-text-clickable"
+            v-if="nodeData.link" 
+            :href="nodeData.link" >
+              <slot name="node_text" :nodeData="nodeData">
+                {{ nodeData.text }}
+              </slot>
+            </a>
+            <template 
+            v-else>
+              <slot name="node_text" :nodeData="nodeData">
+                {{ nodeData.text }}
+              </slot>
+            </template>
+          </div>
+
+          <input 
+          type="text" 
+          class="node-text-clickable"
+          ref="textinput"
+          v-else 
+          v-model="editedText" 
+          v-autowidth="{maxWidth: '80%'}" 
+          @blur="endUpdate" 
+          @keyup.enter="endUpdate" />
+        </label>
+      </div>
+    </div>
     <ul 
     v-if="(expanded && !isLeaf)">
       <draggable 
@@ -61,20 +84,24 @@
       @end="registerDropUnder"
       :options="{
         group: dragGroup,
+        handle: '.tree-node-label',
         animation: 70,
+        fallbackTolerance: 3,
       }"
       :data-node-id="nodeData.id" >
         <TreeNode 
         v-for="childNodeID in nodeData.children" 
         :key="childNodeID" 
         :nodeID="childNodeID"
-        :singleCheck="singleCheck"
         :getNodeData="getNodeData"
         :treeEventBus="treeEventBus"
-        :checkboxComponent="checkboxComponent"
-        :iconComponent="iconComponent"
         :editingText="editingText"
-        :dragGroup="dragGroup" />
+        :dragGroup="dragGroup">
+          <slot v-for="slot in Object.keys($slots)" :name="slot" :slot="slot"/>
+          <template v-for="slot in Object.keys($scopedSlots)" :slot="slot" slot-scope="scope">
+            <slot :name="slot" v-bind="scope"/>
+          </template>
+        </TreeNode>
       </draggable>
     </ul>
   </li>
@@ -93,11 +120,8 @@ export default {
   },
   props: {
     nodeID: {type: String, required: false, default: null},
-    singleCheck: {type: Boolean, required: false, default: false},
     getNodeData: {type: Function, required: true},
     treeEventBus: {type: Object, required: true},
-    checkboxComponent: {type: Object, required: true},
-    iconComponent: {type: Object, required: true},
     editingText:  {type: [Number, String], required: false},
     dragGroup: {type: String, required: true},
   },
@@ -106,7 +130,7 @@ export default {
       if (event.srcEvent) {
         event = event.srcEvent;
       }
-      this.treeEventBus.$emit('context', {id: this.nodeData.id, event: event});
+      this.treeEventBus.$emit('context', {id: this.nodeData, event: event});
     },
     beginUpdate: function() {
       this.editedText = this.nodeData.text;
@@ -117,17 +141,15 @@ export default {
     toggleChecked: function() {
       this.treeEventBus.$emit('updateCheck', {id: this.nodeData.id, value: !this.nodeData.checked});
     },
-    toggleSelect: function() {
+    toggleSelect: function(e) {
+      console.log(e)
+      if (e.target.classList.contains("node-text-clickable")) return;
       this.treeEventBus.$emit('updateSelect', {id: this.nodeData.id, value: !this.nodeData.selected});
     },
     toggleExpand: function() {
       this.expanded = !this.expanded;
       if (!this.expanded && !this.nodeData.selected) {
         this.treeEventBus.$emit('reselectDescendants', {id: this.nodeData.id, value: false});
-      }
-      // Dirty hack to get around some weird bug in Vue
-      if (this.expanded) {
-        this.$refs['checkbox'].$forceUpdate();
       }
     },
     registerDropUnder: function(event) {
@@ -151,7 +173,7 @@ export default {
       return {
         "tree-icon" : true,
         "expand-icon" : true,
-        "empty-expand-icon" : !this.expandIcon,
+        "empty-expand-icon" : this.expandStatus == null,
       }
     },
     isRoot: function() {
@@ -162,17 +184,14 @@ export default {
       if (this.nodeData == null) return false;
       return !this.nodeData.children.length > 0;
     },
-    expandIcon: function() {
+    expandStatus: function() {
       if (this.isLeaf) {
-        return false;
+        return null;
       } else if (this.expanded) {
-        return "minus-circle";
+        return true;
       } else {
-        return "plus-circle";
+        return false;
       }
-    },
-    iconColor: function() {
-      return this.nodeData.iconColor || '#000';
     },
     currentlyEditingText: function() {
       if (this.nodeData == null) return false;
@@ -193,15 +212,19 @@ export default {
 </script>
 <style lang="stylus">
   .tree-node
-    display: flex
-    flex-direction: row
-    flex-wrap: wrap
-    align-items: center
+
+    .main-node-container
+      display: flex
+      flex-direction: row
+      flex-wrap: wrap
+      align-items: center
+      max-width: 100%
+      height: 1.5em
 
     &.selected
       background-color: #999
 
-    .tree-node-label
+    .tree-node-label-container
       flex: 1
       min-width: 0
       display: flex
@@ -209,29 +232,55 @@ export default {
       flex-wrap: wrap
       align-items: center
       cursor: default
-      height: 1em
+      height: 100%
       padding: 0 2px 0 2px
 
-      .tree-text, .tree-icon
-        display: inline-block
-    
-      .tree-text
-        flex: 1
-        min-width: 0
+      .tree-node-label
+        height: 100%
         max-width: 100%
-        overflow: hidden
-        text-overflow: ellipsis
-        height: 1em
+
+        .tree-text, .tree-icon, .tree-icon > *
+          display: inline-block
+      
+        .tree-text
+          min-width: 0
+          max-width: 100%
+          overflow: hidden
+          text-overflow: ellipsis
+          height: 1em
+          position: relative
+          top: 50%
+          transform: translateY(-50%)
+
+    .expand-click
+      height: 100%
+      display: flex
+      margin-right: 0.25em
 
     .expand-icon
+      box-sizing: border-box
       width: 1em
+      height: 1em
+      line-height: 0.8em
+      text-align: center
+      align-self: center
+      font-weight: bolder
+      color: #eee
+      margin: 0
+      border: 1px solid #444
+      border-radius: 1em
+      background-color: #444
 
     .empty-expand-icon
       color: rgba(0,0,0,0)
+      background-color: rgba(0,0,0,0)
+      border: 0
+
     
     ul
       padding-left: 0
       flex-basis: 100%
+      max-width: 100%
 
     .tree-node>ul
       &>div>.tree-node
@@ -240,28 +289,28 @@ export default {
 
         &::before, &::after
           content: ""
+          box-sizing: border-box
           position: absolute
           left: 0.5em
 
         &::before
           border-top: 1px solid #000
           height: 100%
-          top: 0.5em
+          top: 0.75em
           width: 0.5em
 
         &::after
           border-left: 1px solid #000
           height: 100%
           width: 0
-          top: 0
+          top: -0.25em
 
         &:last-child::after
-          height: 0.5em
+          height: 1em
         
         .empty-expand-icon
-          align-self: stretch
+          height: 50%
+          align-self: flex-end;
+          border-radius: 0
           border-top: 1px solid #000
-          border-bottom: 0
-          margin-top: 0.5em
-          height: 0.5em
 </style>

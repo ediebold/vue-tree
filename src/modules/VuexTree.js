@@ -112,6 +112,11 @@ export default {
           if (field == "parent" || field == "previousSibling" || field == "nextsibling" || field == "children") continue;
           node[field] = rawNode[field] || null;
         }
+        for (let field of Object.keys(rawNode)) {
+          if (node[field] !== undefined) continue;
+          if (field == "parent" || field == "previousSibling" || field == "nextsibling" || field == "children") continue;
+          node[field] = rawNode[field];
+        }
         // Place in correct spot in array to avoid ordering issues later.
         if (node.previousSibling === undefined) {
           nodesNoPrevious.push(node);
@@ -381,6 +386,15 @@ export default {
     addScene(state, {sceneName, sceneNodes}) {
       Vue.set(state.scenes, sceneName, sceneNodes);
     },
+    addField(state, newField) {
+      state.trackedNodeFields.push(newField);
+    },
+    removeTrackedField(state, field) {
+      let index = state.trackedNodeFields.findIndex(x => x == field);
+      if (index > -1) {
+        state.trackedNodeFields.splice(index,1);
+      }
+    },
     clear(state) {
       state.nodes = {};
       state.currentScene = "";
@@ -405,6 +419,32 @@ export default {
     getNodesArray (state) {
       return Object.values(state.nodes);
     },
+    getNodesArrayBFS (state) {
+      let nodes = [];
+      let rest_of_nodes = state.rootNodes.slice(0);
+      while (rest_of_nodes.length > 0) {
+        let nodeID = rest_of_nodes.shift()
+        let full_node = state.nodes[nodeID];
+        nodes.push(full_node);
+        if (full_node.children.length > 0) {
+          rest_of_nodes = rest_of_nodes.concat(full_node.children);
+        }
+      }
+      return nodes;
+    },
+    getNodesArrayDFS (state) {
+      let nodes = [];
+      let rest_of_nodes = state.rootNodes.slice(0);
+      while (rest_of_nodes.length > 0) {
+        let nodeID = rest_of_nodes.shift()
+        let full_node = state.nodes[nodeID];
+        nodes.push(full_node);
+        if (full_node.children.length > 0) {
+          rest_of_nodes = full_node.children.concat(rest_of_nodes);
+        }
+      }
+      return nodes;
+    },
     getNode: (state) => (id) => {
       return state.nodes[id];
     },
@@ -426,6 +466,7 @@ export default {
     getAllLeaves (state) {
       return Object.values(state.nodes).filter(node => node.children.length === 0);
     },
+    //returns dfs!
     getLeaves: (state) => (id) => {
       let leaves = [];
       let checkChildren;
@@ -437,12 +478,12 @@ export default {
       let curNodeChildren = [];
       if (checkChildren.length < 1) return [id];
       while (checkChildren.length > 0) {
-        let curNode = checkChildren.pop();
+        let curNode = checkChildren.shift();
         curNodeChildren = state.nodes[curNode].children;
         if (curNodeChildren.length == 0) {
           leaves.push(curNode);
         } else {
-          checkChildren = checkChildren.concat(curNodeChildren);
+          checkChildren = curNodeChildren.concat(checkChildren);
         }
       }
       return leaves;
@@ -464,7 +505,10 @@ export default {
     },
     getScene: (state) => (sceneName) => {
       return state.scenes[sceneName];
-    }
+    },
+    getTrackedFields(state) {
+      return state.trackedNodeFields;
+    },
   },
   actions: {
     saveCurrentAsScene: {

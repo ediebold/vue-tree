@@ -4,14 +4,26 @@
         <h2>Tree View</h2>
         <div>
             <div style="width:440px; margin: 0 auto;">
-                <div style="font-size: 18px; width: 300px; text-align: left; display:inline-block; vertical-align: top; background-color: yellow;">
+                <div class="playground">
                     <br />
                     <v-tree 
                     :treeEvents="treeEvents"
-                    :namespace="namespace" 
-                    :iconComponent="iconType" 
-                    :iconPickComponent="false" 
-                    :allowedChildrenCheck="allowedChildrenCheckTest" />
+                    :namespace="namespace"
+                    :allowedChildrenCheck="allowedChildrenCheckTest">
+                        <template slot="node_icon" slot-scope="{nodeData}">
+                            <font-awesome-icon 
+                            :icon="nodeData.icon" 
+                            fixed-width />
+                        </template>
+                        <!-- <template slot="node_checkbox" slot-scope="{nodeData}">
+                            {{nodeData.checked}}
+                        </template> -->
+                        <template slot="icon_picker" slot-scope="{endEditIcon}">
+                            <font-awesome-picker 
+                            v-on-clickaway="() => endEditIcon(null)"
+                            @selectIcon="endEditIcon($event.className)" />
+                        </template>
+                    </v-tree>
                     <br />
                 </div>
                 <button style="clear: both; display: block;" @click="insertUnsorted">Test Unsorted Insert</button>
@@ -19,14 +31,33 @@
                 <hr />
                 <input type="text" v-model="newSceneName" />
                 <button @click="saveScene(newSceneName)">Save Current Scene</button>
+                <hr />
+                <input type="text" v-model="newFieldName" />
+                <button @click="saveField(newFieldName)">Add Tracked Field</button>
+                <hr />
+                <template v-if="trackedFields">
+                    <button v-for="field in trackedFields" @click="deleteField(field)">{{ field }}</button>
+                </template>
             </div>
         </div>
     </div>
 </template>
 
 <script>
+//Font-awesome icons for default icon node.
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { fas } from '@fortawesome/free-solid-svg-icons'
+import { far } from '@fortawesome/free-regular-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { dom } from '@fortawesome/fontawesome-svg-core'
+dom.watch() // This will kick of the initial replacement of i to svg tags and configure a MutationObserver
+library.add(fas)
+library.add(far)
 
-import ImageIcon from './components/image-icon.vue'
+
+import { fontAwesomePicker } from 'font-awesome-picker';
+import { directive as onClickaway } from 'vue-clickaway';
+
 
 export default {
     name: 'app',
@@ -38,15 +69,20 @@ export default {
                 checked: function(id, newValue){/*console.log('checked', id, newValue)*/},
                 selected: function(id, newValue){/*console.log('selected', id, newValue)*/},
                 contextOptions: [
-                    {label: "test", func: function(id){console.log("test", id)}},
+                    {label: "Test", func: function(id){console.log("test", id)}},
                     {
                         label: "Get Leaves", 
+                        func: this.consoleLeaves,
+                    },
+                    {
+                        label: "Only roots", 
+                        show: function(nodeData){ return nodeData.parent == null;},
                         func: this.consoleLeaves,
                     },
                 ],
             },
             newSceneName: "",
-            iconType: ImageIcon
+            newFieldName: "",
         }
     },
     methods: {
@@ -55,10 +91,10 @@ export default {
         },
         insertUnsorted: function() {
             let unsorted = [
-                {id: 1, parent: null, previousSibling: null, text: "test", checked: true, link: "google.com", icon: "https://cpu-geodjango-media.s3.amazonaws.com/media/myphoto.png"},
-                {id: 2, parent: null, previousSibling: 1, text: "test2", checked: true},
+                {id: 1, parent: null, previousSibling: null, text: "test", checked: false, icon: "address-book", labelColor: "#FF9900"},
+                {id: 2, parent: null, previousSibling: 1, text: "test2", checked: false, link: "www.google.com"},
                 {id: 8, parent: null, previousSibling: undefined, text: "test feature 11", checked: true},
-                {id: 3, parent: 1, previousSibling: null, text: "test child", checked: false, icon: 'http://oxydy.com/wp-content/uploads/2018/02/test-img-300x194.png'},
+                {id: 3, parent: 1, previousSibling: null, text: "test child", checked: false, icon: 'coffee'},
                 {id: 4, parent: 1, previousSibling: 3, text: "test child 2", checked: true},
                 {id: 6, parent: 3, previousSibling: null, text: "test feature", checked: true},
                 {id: 7, parent: 3, previousSibling: 6, text: "test feature 2", checked: true},
@@ -77,12 +113,29 @@ export default {
         loadScene: function(sceneName) {
             this.$store.dispatch("switchToScene", sceneName);
         },
+        saveField: function(fieldName) {
+            this.$store.commit(this.namespace + "/addField", fieldName);
+            this.newFieldName = "";
+        },
+        deleteField: function(fieldName) {
+            this.$store.commit(this.namespace + "/removeField", fieldName);
+        },
     },
     computed: {
         scenes: function() {
             return this.$store.getters[this.namespace + '/getSceneNames'];
-        }
-    }
+        },
+        trackedFields: function() {
+            return this.$store.getters[this.namespace + '/getTrackedFields'];
+        },
+    },
+    components: {
+        'font-awesome-icon': FontAwesomeIcon,
+        'font-awesome-picker': fontAwesomePicker,
+    },
+    directives: {
+        onClickaway: onClickaway,
+    },
 }
 </script>
 
@@ -91,5 +144,20 @@ export default {
     text-align: center;
     color: #2c3e50;
     margin-top: 60px;
+}
+
+.playground {
+    font-size: 18px;
+    width: 300px;
+    height: 400px;
+    text-align: left;
+    display:inline-block;
+    vertical-align: top;
+    background-color: yellow;
+    overflow-y: scroll;
+    scrollbar-width: none;
+}
+.playground::-webkit-scrollbar {
+    display: none;
 }
 </style>
