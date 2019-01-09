@@ -67,7 +67,7 @@
 
           <input 
           type="text" 
-          class="node-text-clickable"
+          class="node-text-input node-text-clickable"
           ref="textinput"
           v-else 
           v-model="editedText" 
@@ -134,6 +134,10 @@ export default {
     },
     beginUpdate: function() {
       this.editedText = this.nodeData.text;
+      this.$nextTick(function() {
+        if (this.$refs.textinput)
+        this.$refs.textinput.focus();
+      })
     },
     endUpdate: function() {
       this.treeEventBus.$emit('endTextUpdate', {id: this.nodeData.id, newText: this.editedText});
@@ -251,6 +255,9 @@ export default {
           position: relative
           top: 50%
           transform: translateY(-50%)
+
+        .node-text-input
+          height: 100%
 
     .expand-click
       height: 100%
